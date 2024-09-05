@@ -1,0 +1,10 @@
+*.pth
+*.pt
+*.pkl
+*.pth.tar
+*.tar
+*.zip
+*.rar
+*.7z
+*.gz
+*.pyc
