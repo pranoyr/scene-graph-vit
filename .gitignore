@@ -8,3 +8,4 @@
 *.7z
 *.gz
 *.pyc
+/experiments
