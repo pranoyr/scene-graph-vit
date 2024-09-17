@@ -23,7 +23,7 @@
 import torch
 from einops import rearrange, repeat, pack 
 
-indices = torch.tensor([[[0, 0, 1],
+scores = torch.tensor([[[0, 0, 1],
                         [0, 0, 2],
                         [0, 1, 1],
                         [0, 1, 2],
@@ -38,21 +38,32 @@ indices = torch.tensor([[[0, 0, 1],
                         [1, 2, 2]]])
 
 
-top_k_indices = torch.tensor([[1, 2, 3],
-                              [0, 2, 3]])
+print(scores.shape)
+
+indices = torch.where(scores[:, :, 1] == scores[:, :, 2])
+
+extracted_scores = scores[indices]
+
+print(extracted_scores)
+
+# extract the scores 
+
+
+# top_k_indices = torch.tensor([[1, 2, 3],
+#                               [0, 2, 3]])
 
 
 
-print(top_k_indices.shape)
+# print(top_k_indices.shape)
 
 
-top_k_indices = repeat(top_k_indices, 'b k -> b n k', n=6)
+# top_k_indices = repeat(top_k_indices, 'b k -> b n k', n=6)
 
 
-print(indices.shape)
-print(top_k_indices)
+# print(indices.shape)
+# print(top_k_indices)
 
-index = top_k_indices.gather(-1, indices)
-print(index)
+# index = top_k_indices.gather(-1, indices)
+# print(index)
 
 
