@@ -1,7 +1,7 @@
 from omegaconf import DictConfig, ListConfig, OmegaConf
 import argparse
 # from models import build_model
-from scene_graph.data import VRDDataset
+from scene_graph.data import build_dataset
 from scene_graph.model import SceneGraphViT
 from scene_graph.trainer import SceneGraphTrainer
 import logging
@@ -38,7 +38,7 @@ if __name__=="__main__":
     
     # build the model, data loader and trainer
     model = SceneGraphViT(cfg)
-    data_loaders = VRDDataset(cfg)
+    data_loaders = build_dataset(cfg)
     trainer = SceneGraphTrainer(cfg, model, data_loaders)
     
     # train the model
