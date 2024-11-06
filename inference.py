@@ -74,12 +74,11 @@ class RelationshipAttention(nn.Module):
         # self.q = nn.Linear(dim, dim)
         # self.k = nn.Linear(dim, dim)
 
-    def forward(self, q, k, top_k_instances=100, top_k_relationships=5):
+    def forward(self, q, k, top_k_instances=64, top_k_relationships=5):
         # q = self.q(q) query - subject
         # k = self.k(k) key - object
 
         device = q.device
-
         scores = einsum('b i d, b d j -> b i j', q, k.transpose(-1, -2))
         scores = torch.softmax(scores, dim=-1)
 
