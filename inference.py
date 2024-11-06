@@ -1,11 +1,11 @@
 import torch
 import torch.nn as nn
-from .vit import ViT
+from scene_graph.vit import ViT
 from torch import einsum
 from einops import rearrange, repeat, pack
 import torch.nn.functional as F
 from transformers import CLIPTokenizer, CLIPTextModel
-from .matcher import HungarianMatcher, SetCriterion
+from scene_graph.matcher import HungarianMatcher, SetCriterion
 
 class TextEncoder:
     def __init__(self, model_name="openai/clip-vit-base-patch32"):
@@ -141,17 +141,15 @@ class RelationshipAttention(nn.Module):
         
 class SceneGraphViT(nn.Module):
     def __init__(self, 
-        cfg
+         dim,
+        image_size,
+        patch_size,
+        depth,
+        n_heads,
+        mlp_dim,
+        num_classes,
         ):
         super(SceneGraphViT, self).__init__()
-
-        dim = cfg.model.dim
-        image_size = cfg.model.image_size
-        patch_size = cfg.model.patch_size
-        depth = cfg.model.depth
-        n_heads = cfg.model.n_heads
-        mlp_dim = cfg.model.mlp_dim
-        num_classes = cfg.model.num_classes
 
 
         self.vit = ViT(
@@ -185,7 +183,7 @@ class SceneGraphViT(nn.Module):
             nn.ReLU()
         )
 
-    def forward(self, x, annotations):
+    def forward(self, x):
 
         b = len(x)
         x = self.vit(x)
@@ -204,15 +202,7 @@ class SceneGraphViT(nn.Module):
         bbox = self.bbox_mlp(object_relationship_embeds)
         logits = self.classifier(object_relationship_embeds)
 
-        outputs = {}
-        outputs['pred_logits'] = logits
-        outputs['pred_boxes'] = bbox
-
-        targets = parse_objects(annotations)
-
-        # loss function
-        loss = self.criterion(outputs, targets)
-        return loss
+        return logits, bbox
 
 
 
@@ -221,55 +211,18 @@ class SceneGraphViT(nn.Module):
 
 if __name__ == "__main__":
 
-    # model = SceneGraphViT(
-    # dim=1024,
-    # image_size=256,
-    # patch_size=32,
-    # depth=12,
-    # n_heads=16,
-    # mlp_dim=2048
-    # )
+    model = SceneGraphViT(
+    dim=1024,
+    image_size=256,
+    patch_size=32,
+    depth=12,
+    n_heads=16,
+    mlp_dim=2048,
+    num_classes=100
+    )
 
 
+    img = torch.randn(2, 3, 256, 256)
+    logits, bbox = model(img)
 
-    img_batch = torch.randn(2, 3, 256, 256)
-    annotations = [{'boxes': torch.tensor([[[349.,  16., 436., 208.],
-            [139., 138., 756., 637.]],
-
-            [[349.,  16., 436., 208.],
-            [368.,  14., 423.,  37.]],
-
-            [[349.,  16., 436., 208.],  # sampel 1
-            [139., 138., 756., 637.]],
-
-            [[ 74., 301., 152., 537.],
-            [ 79., 332., 152., 424.]],
-
-            [[ 74., 301., 152., 537.],
-            [139., 138., 756., 637.]]]), 
-            'labels': torch.tensor([[ 0, 68],
-            [ 0, 13],
-            [ 0, 68],
-            [ 0,  6],
-            [ 0, 68]]), 'preds': torch.tensor([36,  2,  1,  3,  4])}, 
-            
-            
-            {'boxes': torch.tensor([[[1.0000e+00, 2.0000e+00, 1.0150e+03, 1.5200e+02],
-            [6.0900e+02, 1.3100e+02, 7.5900e+02, 3.8400e+02]],
-
-            [[6.0900e+02, 1.3100e+02, 7.5900e+02, 3.8400e+02],
-            [6.1300e+02, 2.0100e+02, 6.3800e+02, 2.2000e+02]],
-
-            [[6.1300e+02, 2.0100e+02, 6.3800e+02, 2.2000e+02],          # sample 2
-            [6.1300e+02, 1.9800e+02, 6.5100e+02, 2.2700e+02]],
-
-            [[7.3300e+02, 3.6700e+02, 7.5900e+02, 4.0000e+02],
-            [6.0900e+02, 1.3100e+02, 7.5900e+02, 3.8400e+02]]]), 
-            'labels': torch.tensor([[14,  0],
-            [ 0, 85],
-            [85, 57],
-            [33,  0]]), 'preds': torch.tensor([11, 28, 23,  1])}]
-
-    loss = model(img_batch, annotations)
-    print(loss)
-
+    print(logits.shape, bbox.shape)
