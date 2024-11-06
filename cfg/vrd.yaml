@@ -1,0 +1,63 @@
+experiment:
+    project_name: scene-graph
+    exp_name: run1
+    max_train_examples: 10000000 # not used
+    save_every: 1000
+    eval_every: 500
+    sample_every: 10000000 # not used
+    log_every: 500
+    log_level: info
+    resume_path_from_checkpoint: null
+
+
+model:
+    name: scene-graph
+    dim : 1024
+    image_size : 256
+    patch_size : 32
+    n_heads : 16
+    depth : 12
+    mlp_dim : 2048
+    num_classes : 100
+
+
+dataset:
+    name: vrd
+    params:
+        root_path:   /Users/pranoy/Downloads/vrd
+        num_workers: 4
+        pin_memory: True
+        batch_size: 8
+        persistent_workers: True
+        shuffle : True
+    preprocessing:
+        resolution: 256
+        center_crop: False
+        random_flip: True
+        random_crop: True
+        mean : null
+        std : null
+        scale : 1.0
+
+optimizer:
+    name: adam
+    params: 
+        learning_rate: 0.0001
+        beta1: 0.9
+        beta2: 0.96
+        weight_decay: 0.0
+        epsilon: 1e-8
+
+lr_scheduler:
+    name: cosine_with_warmup
+    params:
+        learning_rate: ${optimizer.params.learning_rate}
+        warmup_steps: 4000
+        decay_steps: null
+
+training:
+    gradient_accumulation_steps: 32
+    mixed_precision: "no"
+    seed: 42
+    num_epochs: 200
+    max_grad_norm: null
