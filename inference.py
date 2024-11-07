@@ -36,7 +36,7 @@ class TextEncoder:
         return text_features
 
 # # Example usage
-# if __name__ == "__main__":
+# if __name__ == "__main__":        
 #     encoder = TextEncoder()
     
 #     # Single word encoding
@@ -221,7 +221,22 @@ if __name__ == "__main__":
     )
 
 
+    # load ckpt 
+    ckpt = torch.load("scene_graph_vit.pth")
+    model.load_state_dict(ckpt['model'])
+
+    model.eval()
+
+
     img = torch.randn(2, 3, 256, 256)
     logits, bbox = model(img)
+    # Get the most probable boxes
+    prob = F.softmax(logits, dim=-1)
+    max_prob, labels = torch.max(prob, dim=-1)
 
-    print(logits.shape, bbox.shape)
+    print(labels)
+    # most_probable_boxes = bbox[torch.arange(bbox.size(0)), labels]
+
+    # print("Most probable boxes:", most_probable_boxes)
+
+    # print(logits.shape, bbox.shape)
