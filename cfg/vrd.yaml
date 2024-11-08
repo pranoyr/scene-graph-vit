@@ -12,7 +12,7 @@ experiment:
 
 model:
     name: scene-graph
-    dim : 1024
+    dim : 768
     image_size : 256
     patch_size : 32
     n_heads : 16

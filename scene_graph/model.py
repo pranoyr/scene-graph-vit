@@ -6,6 +6,7 @@ from einops import rearrange, repeat, pack
 import torch.nn.functional as F
 from transformers import CLIPTokenizer, CLIPTextModel
 from .matcher import HungarianMatcher, SetCriterion
+from transformers import AutoImageProcessor, Dinov2Model
 
 class TextEncoder:
     def __init__(self, model_name="openai/clip-vit-base-patch32"):
@@ -74,7 +75,7 @@ class RelationshipAttention(nn.Module):
         # self.q = nn.Linear(dim, dim)
         # self.k = nn.Linear(dim, dim)
 
-    def forward(self, q, k, top_k_instances=64, top_k_relationships=5):
+    def forward(self, q, k, top_k_instances=100, top_k_relationships=5):
         # q = self.q(q) query - subject
         # k = self.k(k) key - object
 
@@ -154,14 +155,17 @@ class SceneGraphViT(nn.Module):
         num_classes = cfg.model.num_classes
 
 
-        self.vit = ViT(
-            dim=dim,
-            image_size=image_size,
-            patch_size=patch_size,
-            depth=depth,
-            n_heads=n_heads,
-            mlp_dim=mlp_dim
-        )
+        # self.vit = ViT(
+        #     dim=dim,
+        #     image_size=image_size,
+        #     patch_size=patch_size,
+        #     depth=depth,
+        #     n_heads=n_heads,
+        #     mlp_dim=mlp_dim
+        # )
+
+ 
+        self.vit = Dinov2Model.from_pretrained("facebook/dinov2-base")
 
 
         self.subject_head = nn.Linear(dim, dim)
