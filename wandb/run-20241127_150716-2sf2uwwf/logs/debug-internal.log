@@ -1,0 +1,64 @@
+2024-11-27 15:07:16,676 INFO    MainThread:428838 [internal.py:wandb_internal():90] W&B internal server running at pid: 428838, started at: 2024-11-27 15:07:16.675947
+2024-11-27 15:07:16,677 INFO    WriterThread:428838 [datastore.py:open_for_write():75] open: /home/pranoy/code/scene-graph-vit/wandb/run-20241127_150716-2sf2uwwf/run-2sf2uwwf.wandb
+2024-11-27 15:07:16,677 DEBUG   SenderThread:428838 [sender.py:send():236] send: header
+2024-11-27 15:07:16,677 DEBUG   SenderThread:428838 [sender.py:send():236] send: run
+2024-11-27 15:07:17,056 DEBUG   HandlerThread:428838 [handler.py:handle_request():140] handle_request: check_version
+2024-11-27 15:07:17,057 INFO    SenderThread:428838 [dir_watcher.py:__init__():216] watching files in: /home/pranoy/code/scene-graph-vit/wandb/run-20241127_150716-2sf2uwwf/files
+2024-11-27 15:07:17,057 INFO    SenderThread:428838 [sender.py:_start_run_threads():815] run started: 2sf2uwwf with start time 1732700236
+2024-11-27 15:07:17,057 DEBUG   SenderThread:428838 [sender.py:send():236] send: summary
+2024-11-27 15:07:17,057 INFO    SenderThread:428838 [sender.py:_save_file():952] saving file wandb-summary.json with policy end
+2024-11-27 15:07:17,058 DEBUG   SenderThread:428838 [sender.py:send_request():250] send_request: check_version
+2024-11-27 15:07:17,402 DEBUG   HandlerThread:428838 [handler.py:handle_request():140] handle_request: run_start
+2024-11-27 15:07:17,430 DEBUG   HandlerThread:428838 [meta.py:__init__():35] meta init
+2024-11-27 15:07:17,432 DEBUG   HandlerThread:428838 [meta.py:__init__():49] meta init done
+2024-11-27 15:07:17,432 DEBUG   HandlerThread:428838 [meta.py:probe():209] probe
+2024-11-27 15:07:17,443 DEBUG   HandlerThread:428838 [meta.py:_setup_git():199] setup git
+2024-11-27 15:07:17,447 DEBUG   HandlerThread:428838 [meta.py:_setup_git():206] setup git done
+2024-11-27 15:07:17,447 DEBUG   HandlerThread:428838 [meta.py:_save_pip():53] save pip
+2024-11-27 15:07:17,448 DEBUG   HandlerThread:428838 [meta.py:_save_pip():67] save pip done
+2024-11-27 15:07:17,448 DEBUG   HandlerThread:428838 [meta.py:probe():247] probe done
+2024-11-27 15:07:17,560 DEBUG   SenderThread:428838 [sender.py:send():236] send: files
+2024-11-27 15:07:17,560 INFO    SenderThread:428838 [sender.py:_save_file():952] saving file wandb-metadata.json with policy now
+2024-11-27 15:07:17,562 DEBUG   HandlerThread:428838 [handler.py:handle_request():140] handle_request: stop_status
+2024-11-27 15:07:17,562 DEBUG   SenderThread:428838 [sender.py:send_request():250] send_request: stop_status
+2024-11-27 15:07:17,949 DEBUG   SenderThread:428838 [sender.py:send():236] send: telemetry
+2024-11-27 15:07:18,058 INFO    Thread-7  :428838 [dir_watcher.py:_on_file_created():269] file/dir created: /home/pranoy/code/scene-graph-vit/wandb/run-20241127_150716-2sf2uwwf/files/output.log
+2024-11-27 15:07:18,059 INFO    Thread-7  :428838 [dir_watcher.py:_on_file_created():269] file/dir created: /home/pranoy/code/scene-graph-vit/wandb/run-20241127_150716-2sf2uwwf/files/wandb-summary.json
+2024-11-27 15:07:18,059 INFO    Thread-7  :428838 [dir_watcher.py:_on_file_created():269] file/dir created: /home/pranoy/code/scene-graph-vit/wandb/run-20241127_150716-2sf2uwwf/files/wandb-metadata.json
+2024-11-27 15:07:18,059 INFO    Thread-7  :428838 [dir_watcher.py:_on_file_created():269] file/dir created: /home/pranoy/code/scene-graph-vit/wandb/run-20241127_150716-2sf2uwwf/files/requirements.txt
+2024-11-27 15:07:18,453 INFO    Thread-11 :428838 [upload_job.py:push():138] Uploaded file /tmp/tmp5hiyu57dwandb/62fm6lwf-wandb-metadata.json
+2024-11-27 15:07:18,997 DEBUG   HandlerThread:428838 [handler.py:handle_request():140] handle_request: partial_history
+2024-11-27 15:07:20,058 INFO    Thread-7  :428838 [dir_watcher.py:_on_file_modified():286] file/dir modified: /home/pranoy/code/scene-graph-vit/wandb/run-20241127_150716-2sf2uwwf/files/output.log
+2024-11-27 15:07:22,058 INFO    Thread-7  :428838 [dir_watcher.py:_on_file_modified():286] file/dir modified: /home/pranoy/code/scene-graph-vit/wandb/run-20241127_150716-2sf2uwwf/files/output.log
+2024-11-27 15:07:24,059 INFO    Thread-7  :428838 [dir_watcher.py:_on_file_modified():286] file/dir modified: /home/pranoy/code/scene-graph-vit/wandb/run-20241127_150716-2sf2uwwf/files/output.log
+2024-11-27 15:07:24,534 DEBUG   HandlerThread:428838 [handler.py:handle_request():140] handle_request: partial_history
+2024-11-27 15:07:24,535 DEBUG   SenderThread:428838 [sender.py:send():236] send: history
+2024-11-27 15:07:24,536 DEBUG   SenderThread:428838 [sender.py:send():236] send: summary
+2024-11-27 15:07:24,536 INFO    SenderThread:428838 [sender.py:_save_file():952] saving file wandb-summary.json with policy end
+2024-11-27 15:07:25,059 INFO    Thread-7  :428838 [dir_watcher.py:_on_file_modified():286] file/dir modified: /home/pranoy/code/scene-graph-vit/wandb/run-20241127_150716-2sf2uwwf/files/wandb-summary.json
+2024-11-27 15:07:26,059 INFO    Thread-7  :428838 [dir_watcher.py:_on_file_modified():286] file/dir modified: /home/pranoy/code/scene-graph-vit/wandb/run-20241127_150716-2sf2uwwf/files/output.log
+2024-11-27 15:07:28,060 INFO    Thread-7  :428838 [dir_watcher.py:_on_file_modified():286] file/dir modified: /home/pranoy/code/scene-graph-vit/wandb/run-20241127_150716-2sf2uwwf/files/output.log
+2024-11-27 15:07:30,021 DEBUG   HandlerThread:428838 [handler.py:handle_request():140] handle_request: partial_history
+2024-11-27 15:07:30,021 DEBUG   SenderThread:428838 [sender.py:send():236] send: history
+2024-11-27 15:07:30,022 DEBUG   SenderThread:428838 [sender.py:send():236] send: summary
+2024-11-27 15:07:30,022 INFO    SenderThread:428838 [sender.py:_save_file():952] saving file wandb-summary.json with policy end
+2024-11-27 15:07:30,060 INFO    Thread-7  :428838 [dir_watcher.py:_on_file_modified():286] file/dir modified: /home/pranoy/code/scene-graph-vit/wandb/run-20241127_150716-2sf2uwwf/files/output.log
+2024-11-27 15:07:30,060 INFO    Thread-7  :428838 [dir_watcher.py:_on_file_modified():286] file/dir modified: /home/pranoy/code/scene-graph-vit/wandb/run-20241127_150716-2sf2uwwf/files/wandb-summary.json
+2024-11-27 15:07:32,061 INFO    Thread-7  :428838 [dir_watcher.py:_on_file_modified():286] file/dir modified: /home/pranoy/code/scene-graph-vit/wandb/run-20241127_150716-2sf2uwwf/files/output.log
+2024-11-27 15:07:32,950 DEBUG   HandlerThread:428838 [handler.py:handle_request():140] handle_request: stop_status
+2024-11-27 15:07:32,950 DEBUG   SenderThread:428838 [sender.py:send_request():250] send_request: stop_status
+2024-11-27 15:07:34,061 INFO    Thread-7  :428838 [dir_watcher.py:_on_file_modified():286] file/dir modified: /home/pranoy/code/scene-graph-vit/wandb/run-20241127_150716-2sf2uwwf/files/output.log
+2024-11-27 15:07:35,550 DEBUG   HandlerThread:428838 [handler.py:handle_request():140] handle_request: partial_history
+2024-11-27 15:07:35,551 DEBUG   SenderThread:428838 [sender.py:send():236] send: history
+2024-11-27 15:07:35,551 DEBUG   SenderThread:428838 [sender.py:send():236] send: summary
+2024-11-27 15:07:35,552 INFO    SenderThread:428838 [sender.py:_save_file():952] saving file wandb-summary.json with policy end
+2024-11-27 15:07:36,062 INFO    Thread-7  :428838 [dir_watcher.py:_on_file_modified():286] file/dir modified: /home/pranoy/code/scene-graph-vit/wandb/run-20241127_150716-2sf2uwwf/files/output.log
+2024-11-27 15:07:36,062 INFO    Thread-7  :428838 [dir_watcher.py:_on_file_modified():286] file/dir modified: /home/pranoy/code/scene-graph-vit/wandb/run-20241127_150716-2sf2uwwf/files/wandb-summary.json
+2024-11-27 15:07:38,062 INFO    Thread-7  :428838 [dir_watcher.py:_on_file_modified():286] file/dir modified: /home/pranoy/code/scene-graph-vit/wandb/run-20241127_150716-2sf2uwwf/files/output.log
+2024-11-27 15:07:40,062 INFO    Thread-7  :428838 [dir_watcher.py:_on_file_modified():286] file/dir modified: /home/pranoy/code/scene-graph-vit/wandb/run-20241127_150716-2sf2uwwf/files/output.log
+2024-11-27 15:07:41,193 DEBUG   HandlerThread:428838 [handler.py:handle_request():140] handle_request: partial_history
+2024-11-27 15:07:41,194 DEBUG   SenderThread:428838 [sender.py:send():236] send: history
+2024-11-27 15:07:41,194 DEBUG   SenderThread:428838 [sender.py:send():236] send: summary
+2024-11-27 15:07:41,194 INFO    SenderThread:428838 [sender.py:_save_file():952] saving file wandb-summary.json with policy end
+2024-11-27 15:07:42,063 INFO    Thread-7  :428838 [dir_watcher.py:_on_file_modified():286] file/dir modified: /home/pranoy/code/scene-graph-vit/wandb/run-20241127_150716-2sf2uwwf/files/output.log
+2024-11-27 15:07:42,063 INFO    Thread-7  :428838 [dir_watcher.py:_on_file_modified():286] file/dir modified: /home/pranoy/code/scene-graph-vit/wandb/run-20241127_150716-2sf2uwwf/files/wandb-summary.json

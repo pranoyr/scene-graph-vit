@@ -1,0 +1,57 @@
+INFO:root:Train dataset size: 3780
+INFO:root:Val dataset size: 954
+INFO:root:Number of iterations per epoch: 15
+INFO:root:Total training iterations: 3000
+  0%|                                                                                                                                                                                | 0/473 [00:00<?, ?it/s]INFO:root:Saving checkpoint: outputs/scene-graph/checkpoints/scene-graph_run1.pt ...
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 473/473 [01:32<00:00,  5.12it/s]
+
+
+
+
+
+
+

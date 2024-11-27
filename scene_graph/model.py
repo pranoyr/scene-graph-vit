@@ -83,6 +83,7 @@ class RelationshipAttention(nn.Module):
 
         scores = einsum('b i d, b d j -> b i j', q, k.transpose(-1, -2))
         scores = torch.softmax(scores, dim=-1)
+        scores1 = scores.clone()
 
         #  get diagonal
         diag = scores.diagonal(dim1=-2, dim2=-1)
@@ -135,7 +136,7 @@ class RelationshipAttention(nn.Module):
         # layer norm
         relationship_embeds = F.layer_norm(relationship_embeds, normalized_shape=relationship_embeds.shape[-1:])
 
-        return  subject_object_indices, relationship_embeds
+        return scores1,  subject_object_indices, relationship_embeds
 
         
 
@@ -178,6 +179,8 @@ class SceneGraphViT(nn.Module):
 
         weight_dict = {'loss_ce': 1, 'loss_bbox': 5}
         weight_dict['loss_giou'] = 2
+
+        weight_dict['loss_scores'] = 5
 
         losses = ['labels', 'boxes', 'cardinality']
         self.criterion = SetCriterion(num_classes, matcher=self.matcher, weight_dict=weight_dict,

@@ -1,0 +1,17 @@
+INFO:root:Train dataset size: 3780
+INFO:root:Val dataset size: 954
+INFO:root:Number of iterations per epoch: 15
+INFO:root:Total training iterations: 3000
+  0%|                                                                                                                                                                                | 0/473 [00:00<?, ?it/s]
+Traceback (most recent call last):
+  File "/home/pranoy/code/scene-graph-vit/main.py", line 45, in <module>
+    trainer.train()
+  File "/home/pranoy/code/scene-graph-vit/scene_graph/trainer.py", line 211, in train
+    loss_dict = self.model(img, annots)
+  File "/home/pranoy/cv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1553, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/pranoy/cv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1562, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/pranoy/code/scene-graph-vit/scene_graph/model.py", line 203, in forward
+    scores, subject_object_indices, relationship_embeds = self.relationship_attention(q=subject_logits, k=object_logits)
+ValueError: not enough values to unpack (expected 3, got 2)

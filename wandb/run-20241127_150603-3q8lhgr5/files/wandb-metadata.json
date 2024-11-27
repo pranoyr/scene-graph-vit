@@ -1,0 +1,26 @@
+{
+    "os": "Linux-6.8.0-48-generic-x86_64-with-glibc2.35",
+    "python": "3.10.12",
+    "heartbeatAt": "2024-11-27T09:36:04.519784",
+    "startedAt": "2024-11-27T09:36:03.661297",
+    "docker": null,
+    "gpu": "NVIDIA GeForce RTX 3090",
+    "gpu_count": 1,
+    "cpu_count": 16,
+    "cuda": null,
+    "args": [
+        "config=cfg/vrd.yaml"
+    ],
+    "state": "running",
+    "program": "/home/pranoy/code/scene-graph-vit/main.py",
+    "codePath": "main.py",
+    "git": {
+        "remote": "https://github.com/pranoyr/scene-graph-vit",
+        "commit": "4a3f23bbeaf3e67265a062fa1700aeb391e37527"
+    },
+    "email": "pranoyalkr@gmail.com",
+    "root": "/home/pranoy/code/scene-graph-vit",
+    "host": "pr-desktop1",
+    "username": "pranoy",
+    "executable": "/home/pranoy/cv/bin/python"
+}

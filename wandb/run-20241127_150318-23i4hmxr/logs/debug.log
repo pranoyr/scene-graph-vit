@@ -1,0 +1,28 @@
+2024-11-27 15:03:18,607 INFO    MainThread:425650 [wandb_setup.py:_flush():76] Configure stats pid to 425650
+2024-11-27 15:03:18,607 INFO    MainThread:425650 [wandb_setup.py:_flush():76] Loading settings from /home/pranoy/.config/wandb/settings
+2024-11-27 15:03:18,607 INFO    MainThread:425650 [wandb_setup.py:_flush():76] Loading settings from /home/pranoy/code/scene-graph-vit/wandb/settings
+2024-11-27 15:03:18,607 INFO    MainThread:425650 [wandb_setup.py:_flush():76] Loading settings from environment variables: {}
+2024-11-27 15:03:18,607 INFO    MainThread:425650 [wandb_setup.py:_flush():76] Inferring run settings from compute environment: {'program_relpath': 'main.py', 'program': '/home/pranoy/code/scene-graph-vit/main.py'}
+2024-11-27 15:03:18,607 INFO    MainThread:425650 [wandb_init.py:_log_setup():461] Logging user logs to /home/pranoy/code/scene-graph-vit/wandb/run-20241127_150318-23i4hmxr/logs/debug.log
+2024-11-27 15:03:18,607 INFO    MainThread:425650 [wandb_init.py:_log_setup():462] Logging internal logs to /home/pranoy/code/scene-graph-vit/wandb/run-20241127_150318-23i4hmxr/logs/debug-internal.log
+2024-11-27 15:03:18,607 INFO    MainThread:425650 [wandb_init.py:init():495] calling init triggers
+2024-11-27 15:03:18,607 INFO    MainThread:425650 [wandb_init.py:init():498] wandb.init called with sweep_config: {}
+config: {'_metadata': ContainerMetadata(ref_type=typing.Any, object_type=<class 'dict'>, optional=True, key=None, flags={}, flags_root=False, resolver_cache=defaultdict(<class 'dict'>, {}), key_type=typing.Any, element_type=typing.Any), '_parent': None, '_flags_cache': {'struct': None}, '_content': {'experiment': {'project_name': 'scene-graph', 'exp_name': 'run1', 'max_train_examples': 10000000, 'save_every': 1000, 'eval_every': 500, 'sample_every': 10000000, 'log_every': 500, 'log_level': 'info', 'resume_path_from_checkpoint': None}, 'model': {'name': 'scene-graph', 'dim': 768, 'image_size': 256, 'patch_size': 32, 'n_heads': 16, 'depth': 12, 'mlp_dim': 2048, 'num_classes': 100}, 'dataset': {'name': 'vrd', 'params': {'root_path': '/home/pranoy/Downloads/vrd', 'num_workers': 4, 'pin_memory': True, 'batch_size': 8, 'persistent_workers': True, 'shuffle': True}, 'preprocessing': {'resolution': 256, 'center_crop': False, 'random_flip': True, 'random_crop': True, 'mean': None, 'std': None, 'scale': 1.0}}, 'optimizer': {'name': 'adam', 'params': {'learning_rate': 0.0001, 'beta1': 0.9, 'beta2': 0.96, 'weight_decay': 0.0, 'epsilon': 1e-08}}, 'lr_scheduler': {'name': 'cosine_with_warmup', 'params': {'learning_rate': '${optimizer.params.learning_rate}', 'warmup_steps': 4000, 'decay_steps': None}}, 'training': {'gradient_accumulation_steps': 32, 'mixed_precision': 'no', 'seed': 42, 'num_epochs': 200, 'max_grad_norm': None}, 'config': 'cfg/vrd.yaml'}}
+2024-11-27 15:03:18,607 INFO    MainThread:425650 [wandb_init.py:init():548] starting backend
+2024-11-27 15:03:18,607 INFO    MainThread:425650 [backend.py:_multiprocessing_setup():97] multiprocessing start_methods=fork,spawn,forkserver, using: spawn
+2024-11-27 15:03:18,610 INFO    MainThread:425650 [backend.py:ensure_launched():217] starting backend process...
+2024-11-27 15:03:18,610 INFO    MainThread:425650 [backend.py:ensure_launched():222] started backend process with pid: 425747
+2024-11-27 15:03:18,611 INFO    MainThread:425650 [wandb_init.py:init():558] backend started and connected
+2024-11-27 15:03:18,613 INFO    MainThread:425650 [wandb_init.py:init():634] updated telemetry
+2024-11-27 15:03:18,616 INFO    MainThread:425650 [wandb_init.py:init():665] communicating run to backend with 30 second timeout
+2024-11-27 15:03:19,332 INFO    MainThread:425650 [wandb_run.py:_on_init():1919] communicating current version
+2024-11-27 15:03:19,417 INFO    MainThread:425650 [wandb_run.py:_on_init():1923] got version response upgrade_message: "wandb version 0.18.7 is available!  To upgrade, please run:\n $ pip install wandb --upgrade"
+
+2024-11-27 15:03:19,417 INFO    MainThread:425650 [wandb_init.py:init():700] starting run threads in backend
+2024-11-27 15:03:19,583 INFO    MainThread:425650 [wandb_run.py:_console_start():1893] atexit reg
+2024-11-27 15:03:19,584 INFO    MainThread:425650 [wandb_run.py:_redirect():1766] redirect: SettingsConsole.REDIRECT
+2024-11-27 15:03:19,584 INFO    MainThread:425650 [wandb_run.py:_redirect():1771] Redirecting console.
+2024-11-27 15:03:19,585 INFO    MainThread:425650 [wandb_run.py:_redirect():1827] Redirects installed.
+2024-11-27 15:03:19,585 INFO    MainThread:425650 [wandb_init.py:init():732] run started, returning control to user process
+2024-11-27 15:03:21,626 INFO    MainThread:425650 [wandb_run.py:_atexit_cleanup():1862] got exitcode: 255
+2024-11-27 15:03:21,628 INFO    MainThread:425650 [wandb_run.py:_restore():1834] restore
