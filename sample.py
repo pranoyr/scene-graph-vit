@@ -1,11 +1,11 @@
 import torch
 import torch.nn as nn
-from .vit import ViT
+from scene_graph.vit import ViT
 from torch import einsum
 from einops import rearrange, repeat, pack
 import torch.nn.functional as F
 from transformers import CLIPTokenizer, CLIPTextModel
-from .matcher import HungarianMatcher, SetCriterion
+from scene_graph.matcher import HungarianMatcher, SetCriterion
 from transformers import AutoImageProcessor, Dinov2Model
 
 class TextEncoder:
@@ -85,16 +85,19 @@ class RelationshipAttention(nn.Module):
         scores = torch.softmax(scores, dim=-1)
         scores1 = scores.clone()
 
+
         #  get diagonal
         diag = scores.diagonal(dim1=-2, dim2=-1)
 
         # relationship scores
         top_k_indices = torch.topk(diag, k=top_k_instances, dim=-1)[1]
         top_k_indices= torch.sort(top_k_indices, dim=-1, descending=False)[0]
+        # print(top_k_indices)
         top_k_indices1 = top_k_indices.clone()
         scores = scores[torch.arange(scores.size(0)).unsqueeze(1), top_k_indices]
         top_k_indices = repeat(top_k_indices, 'b n ->  b r n', r=scores.shape[1])
         relationship_scores = scores.gather(-1, top_k_indices)
+        # print(relationship_scores.shape)
 
         max_int_value = 1e9
         relationship_scores.masked_fill_(torch.eye(relationship_scores.shape[1], relationship_scores.shape[2], dtype=bool, device=device).unsqueeze(0).expand(relationship_scores.shape[0], -1, -1), max_int_value)
@@ -105,6 +108,7 @@ class RelationshipAttention(nn.Module):
         # add all diag indices
 
         split_shape = top_k_rel_indices.shape[-1] * top_k_rel_indices.shape[-2]
+
         top_k_rel_indices = relationship_scores.scatter(-1, top_k_rel_indices, -1)
 
         indices = torch.where(top_k_rel_indices == -1)
@@ -116,6 +120,7 @@ class RelationshipAttention(nn.Module):
         top_k_indices1 = repeat(top_k_indices1, 'b k -> b n k', n=split_shape)
         subject_object_indices = top_k_indices1.gather(-1, indices)
 
+       
         # Replace the first index in subject_object_indices with batch ids
         batch_size = subject_object_indices.shape[0]
         batch_ids = torch.arange(batch_size).unsqueeze(-1).unsqueeze(-1).expand_as(subject_object_indices[:, :, :1]).to(device)
@@ -136,25 +141,22 @@ class RelationshipAttention(nn.Module):
         # layer norm
         relationship_embeds = F.layer_norm(relationship_embeds, normalized_shape=relationship_embeds.shape[-1:])
 
-        return scores1,  subject_object_indices, relationship_embeds
+        return  scores1, subject_object_indices, relationship_embeds
 
         
 
         
 class SceneGraphViT(nn.Module):
     def __init__(self, 
-        cfg
+        dim=1024,
+        image_size=256,
+        patch_size=32,
+        depth=12,
+        n_heads=16,
+        mlp_dim=2048,
+        num_classes=100
         ):
         super(SceneGraphViT, self).__init__()
-
-        dim = cfg.model.dim
-        image_size = cfg.model.image_size
-        patch_size = cfg.model.patch_size
-        depth = cfg.model.depth
-        n_heads = cfg.model.n_heads
-        mlp_dim = cfg.model.mlp_dim
-        num_classes = cfg.model.num_classes
-
 
         # self.vit = ViT(
         #     dim=dim,
@@ -167,7 +169,9 @@ class SceneGraphViT(nn.Module):
 
  
         self.vit = Dinov2Model.from_pretrained("facebook/dinov2-base")
-
+        # freeze the model
+        for param in self.vit.parameters():
+            param.requires_grad = False
 
         self.subject_head = nn.Linear(dim, dim)
         self.object_head = nn.Linear(dim, dim)
@@ -179,8 +183,6 @@ class SceneGraphViT(nn.Module):
 
         weight_dict = {'loss_ce': 1, 'loss_bbox': 5}
         weight_dict['loss_giou'] = 2
-
-        weight_dict['loss_scores'] = 5
 
         losses = ['labels', 'boxes', 'cardinality']
         self.criterion = SetCriterion(num_classes, matcher=self.matcher, weight_dict=weight_dict,
@@ -212,6 +214,7 @@ class SceneGraphViT(nn.Module):
         object_relationship_embeds = relationship_embeds[object_indices]
         object_relationship_embeds = rearrange(object_relationship_embeds, '(b n) d -> b n d', b=b)
 
+
         
         bbox = self.bbox_mlp(object_relationship_embeds)
         logits = self.classifier(object_relationship_embeds)
@@ -238,7 +241,7 @@ class SceneGraphViT(nn.Module):
         matched_subject_object_indices = subject_object_indices[indx[:, 0], indx[:, 1]]
 
         targets = torch.zeros_like(scores)
-        targets[matched_subject_object_indices[:, 0], matched_subject_object_indices[:, 1], matched_subject_object_indices[:, 2]] = 1
+        targets[matched_subject_object_indices[:, 0], matched_subject_object_indices[:, 1], matched_subject_object_indices[:, 2]] = 0
 
 
         loss_scores = torch.nn.functional.binary_cross_entropy_with_logits(scores, targets)
@@ -249,20 +252,26 @@ class SceneGraphViT(nn.Module):
 
 
 
+
 if __name__ == "__main__":
 
-    # model = SceneGraphViT(
-    # dim=1024,
-    # image_size=256,
-    # patch_size=32,
-    # depth=12,
-    # n_heads=16,
-    # mlp_dim=2048
-    # )
+    model = SceneGraphViT(
+    dim=768,
+    image_size=256,
+    patch_size=32,
+    depth=12,
+    n_heads=16,
+    mlp_dim=2048,
+    num_classes=100
+    )
+
+
+    # load the model
+    model.load_state_dict(torch.load("scene_graph_vit.pth"))
 
 
 
-    img_batch = torch.randn(2, 3, 256, 256)
+    img_batch = torch.ones(2, 3, 256, 256)
     annotations = [{'boxes': torch.tensor([[[349.,  16., 436., 208.],
             [139., 138., 756., 637.]],
 
