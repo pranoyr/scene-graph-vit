@@ -192,18 +192,23 @@ class SceneGraphViT(nn.Module):
     def forward(self, x, annotations):
 
         b = len(x)
+
         x = self.vit(x)
+        x = x.last_hidden_state
+        
         subject_logits = self.subject_head(x)
         object_logits = self.object_head(x)
 
         # compute relationship attention ,  relationship_embeds - Rij => (b, number of relationships, dim)
-        subject_object_indices, relationship_embeds = self.relationship_attention(q=subject_logits, k=object_logits)
+        scores, subject_object_indices, relationship_embeds = self.relationship_attention(q=subject_logits, k=object_logits)
 
         # object instances => subject == object
         object_indices = torch.where(subject_object_indices[:, :, 1] == subject_object_indices[:, :, 2])
 
+
         object_relationship_embeds = relationship_embeds[object_indices]
         object_relationship_embeds = rearrange(object_relationship_embeds, '(b n) d -> b n d', b=b)
+
         
         bbox = self.bbox_mlp(object_relationship_embeds)
         logits = self.classifier(object_relationship_embeds)
@@ -215,9 +220,27 @@ class SceneGraphViT(nn.Module):
         targets = parse_objects(annotations)
 
         # loss function
-        loss = self.criterion(outputs, targets)
-        return loss
+        matched_indices , loss = self.criterion(outputs, targets)
+        
+        num_objects = outputs['pred_logits'].shape[1]
+        indx = []
+        s = 0
+        for i, j in matched_indices:
+            for idx in i:
+                # print(object_indices[0][idx + s].item(), object_indices[1][idx + s].item())
+                indx.append((object_indices[0][idx + s].item(), object_indices[1][idx + s].item()))
+            s += num_objects
+        indx = torch.tensor(indx)
 
+        matched_subject_object_indices = subject_object_indices[indx[:, 0], indx[:, 1]]
+
+        targets = torch.zeros_like(scores)
+        targets[matched_subject_object_indices[:, 0], matched_subject_object_indices[:, 1], matched_subject_object_indices[:, 2]] = 0
+
+
+        loss_scores = torch.nn.functional.binary_cross_entropy_with_logits(scores, targets)
+        loss.update({'loss_scores': loss_scores})
+        return loss
 
 
 
