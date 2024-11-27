@@ -9,3 +9,4 @@
 *.gz
 *.pyc
 /experiments
+/wandb
