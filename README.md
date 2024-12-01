@@ -1,5 +1,5 @@
-Training 
+## Training 
 python main.py config=cfg/vrd.yaml
 
-Inference
+## Inference
 python inference.py data/sample.jpg
