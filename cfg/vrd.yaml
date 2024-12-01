@@ -1,13 +1,13 @@
 experiment:
     project_name: scene-graph
-    exp_name: run1
+    exp_name: run3
     max_train_examples: 10000000 # not used
     save_every: 1000
     eval_every: 500
     sample_every: 10000000 # not used
     log_every: 500
     log_level: info
-    resume_path_from_checkpoint: null
+    resume_path_from_checkpoint: 
 
 
 model:
@@ -56,8 +56,8 @@ lr_scheduler:
         decay_steps: null
 
 training:
-    gradient_accumulation_steps: 32
+    gradient_accumulation_steps: 4
     mixed_precision: "no"
     seed: 42
-    num_epochs: 200
+    num_epochs: 1000
     max_grad_norm: null

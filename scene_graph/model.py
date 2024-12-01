@@ -82,8 +82,9 @@ class RelationshipAttention(nn.Module):
         device = q.device
 
         scores = einsum('b i d, b d j -> b i j', q, k.transpose(-1, -2))
-        scores = torch.softmax(scores, dim=-1)
         scores1 = scores.clone()
+        scores = torch.softmax(scores, dim=-1)
+    
 
         #  get diagonal
         diag = scores.diagonal(dim1=-2, dim2=-1)
@@ -167,6 +168,8 @@ class SceneGraphViT(nn.Module):
 
  
         self.vit = Dinov2Model.from_pretrained("facebook/dinov2-base")
+        for param in self.vit.parameters():
+            param.requires_grad = False
 
 
         self.subject_head = nn.Linear(dim, dim)
@@ -225,12 +228,12 @@ class SceneGraphViT(nn.Module):
         # loss function
         matched_indices , loss = self.criterion(outputs, targets)
         
+        # loss function for relationship scores
         num_objects = outputs['pred_logits'].shape[1]
         indx = []
         s = 0
         for i, j in matched_indices:
             for idx in i:
-                # print(object_indices[0][idx + s].item(), object_indices[1][idx + s].item())
                 indx.append((object_indices[0][idx + s].item(), object_indices[1][idx + s].item()))
             s += num_objects
         indx = torch.tensor(indx)

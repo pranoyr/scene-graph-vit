@@ -5,7 +5,15 @@ from torch import einsum
 from einops import rearrange, repeat, pack
 import torch.nn.functional as F
 from transformers import CLIPTokenizer, CLIPTextModel
+import os
 from scene_graph.matcher import HungarianMatcher, SetCriterion
+from transformers import AutoImageProcessor, Dinov2Model
+from PIL import Image
+import json
+from torchvision import transforms
+import cv2
+import numpy as np
+import sys
 
 class TextEncoder:
     def __init__(self, model_name="openai/clip-vit-base-patch32"):
@@ -36,7 +44,7 @@ class TextEncoder:
         return text_features
 
 # # Example usage
-# if __name__ == "__main__":        
+# if __name__ == "__main__":
 #     encoder = TextEncoder()
     
 #     # Single word encoding
@@ -79,8 +87,11 @@ class RelationshipAttention(nn.Module):
         # k = self.k(k) key - object
 
         device = q.device
+
         scores = einsum('b i d, b d j -> b i j', q, k.transpose(-1, -2))
         scores = torch.softmax(scores, dim=-1)
+        scores1 = scores.clone()
+
 
         #  get diagonal
         diag = scores.diagonal(dim1=-2, dim2=-1)
@@ -88,10 +99,12 @@ class RelationshipAttention(nn.Module):
         # relationship scores
         top_k_indices = torch.topk(diag, k=top_k_instances, dim=-1)[1]
         top_k_indices= torch.sort(top_k_indices, dim=-1, descending=False)[0]
+        # print(top_k_indices)
         top_k_indices1 = top_k_indices.clone()
         scores = scores[torch.arange(scores.size(0)).unsqueeze(1), top_k_indices]
         top_k_indices = repeat(top_k_indices, 'b n ->  b r n', r=scores.shape[1])
         relationship_scores = scores.gather(-1, top_k_indices)
+        # print(relationship_scores.shape)
 
         max_int_value = 1e9
         relationship_scores.masked_fill_(torch.eye(relationship_scores.shape[1], relationship_scores.shape[2], dtype=bool, device=device).unsqueeze(0).expand(relationship_scores.shape[0], -1, -1), max_int_value)
@@ -102,6 +115,7 @@ class RelationshipAttention(nn.Module):
         # add all diag indices
 
         split_shape = top_k_rel_indices.shape[-1] * top_k_rel_indices.shape[-2]
+
         top_k_rel_indices = relationship_scores.scatter(-1, top_k_rel_indices, -1)
 
         indices = torch.where(top_k_rel_indices == -1)
@@ -113,6 +127,7 @@ class RelationshipAttention(nn.Module):
         top_k_indices1 = repeat(top_k_indices1, 'b k -> b n k', n=split_shape)
         subject_object_indices = top_k_indices1.gather(-1, indices)
 
+       
         # Replace the first index in subject_object_indices with batch ids
         batch_size = subject_object_indices.shape[0]
         batch_ids = torch.arange(batch_size).unsqueeze(-1).unsqueeze(-1).expand_as(subject_object_indices[:, :, :1]).to(device)
@@ -133,33 +148,37 @@ class RelationshipAttention(nn.Module):
         # layer norm
         relationship_embeds = F.layer_norm(relationship_embeds, normalized_shape=relationship_embeds.shape[-1:])
 
-        return  subject_object_indices, relationship_embeds
+        return  scores1, subject_object_indices, relationship_embeds
 
         
 
         
 class SceneGraphViT(nn.Module):
     def __init__(self, 
-         dim,
-        image_size,
-        patch_size,
-        depth,
-        n_heads,
-        mlp_dim,
-        num_classes,
+        dim=1024,
+        image_size=256,
+        patch_size=32,
+        depth=12,
+        n_heads=16,
+        mlp_dim=2048,
+        num_classes=100
         ):
         super(SceneGraphViT, self).__init__()
 
+        # self.vit = ViT(
+        #     dim=dim,
+        #     image_size=image_size,
+        #     patch_size=patch_size,
+        #     depth=depth,
+        #     n_heads=n_heads,
+        #     mlp_dim=mlp_dim
+        # )
 
-        self.vit = ViT(
-            dim=dim,
-            image_size=image_size,
-            patch_size=patch_size,
-            depth=depth,
-            n_heads=n_heads,
-            mlp_dim=mlp_dim
-        )
-
+ 
+        self.vit = Dinov2Model.from_pretrained("facebook/dinov2-base")
+        # freeze the model
+        for param in self.vit.parameters():
+            param.requires_grad = False
 
         self.subject_head = nn.Linear(dim, dim)
         self.object_head = nn.Linear(dim, dim)
@@ -185,19 +204,24 @@ class SceneGraphViT(nn.Module):
     def forward(self, x):
 
         b = len(x)
+
         x = self.vit(x)
+        x = x.last_hidden_state
+        
         subject_logits = self.subject_head(x)
         object_logits = self.object_head(x)
 
         # compute relationship attention ,  relationship_embeds - Rij => (b, number of relationships, dim)
-        subject_object_indices, relationship_embeds = self.relationship_attention(q=subject_logits, k=object_logits)
+        scores, subject_object_indices, relationship_embeds = self.relationship_attention(q=subject_logits, k=object_logits)
 
         # object instances => subject == object
         object_indices = torch.where(subject_object_indices[:, :, 1] == subject_object_indices[:, :, 2])
 
+
         object_relationship_embeds = relationship_embeds[object_indices]
         object_relationship_embeds = rearrange(object_relationship_embeds, '(b n) d -> b n d', b=b)
-        
+
+
         bbox = self.bbox_mlp(object_relationship_embeds)
         logits = self.classifier(object_relationship_embeds)
 
@@ -206,12 +230,10 @@ class SceneGraphViT(nn.Module):
 
 
 
-
-
 if __name__ == "__main__":
 
     model = SceneGraphViT(
-    dim=1024,
+    dim=768,
     image_size=256,
     patch_size=32,
     depth=12,
@@ -219,24 +241,78 @@ if __name__ == "__main__":
     mlp_dim=2048,
     num_classes=100
     )
+    
 
+    # load the model
+    ckpt = torch.load("outputs/scene-graph/checkpoints/scene-graph_run3.pt")
 
-    # load ckpt 
-    ckpt = torch.load("scene_graph_vit.pth")
-    model.load_state_dict(ckpt['model'])
+    model.load_state_dict(ckpt['state_dict'])
 
     model.eval()
 
+    dataset_path= "/home/pranoy/Downloads/vrd"
 
-    img = torch.randn(2, 3, 256, 256)
+
+    with open(os.path.join(dataset_path, 'json_dataset', 'objects.json'), 'r') as f:
+        all_objects = json.load(f)
+
+    print(all_objects)
+
+
+    # Create a dictionary to map integer labels to object names
+    int_to_object = {i: obj for i, obj in enumerate(all_objects)}
+
+
+    transform = transforms.Compose([
+			transforms.Resize((256, 256)),
+			transforms.ToTensor(),
+			transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+		])
+
+
+    if len(sys.argv) != 2:
+        print("Usage: python inference.py <image_path>")
+        sys.exit(1)
+
+    image_path = sys.argv[1]
+    img = Image.open(image_path)
+    img_draw = np.array(img)
+    img_draw = cv2.resize(img_draw, (256, 256))
+    img = transform(img).unsqueeze(0)
     logits, bbox = model(img)
+
+
+    print(logits)
+    print(bbox)
+
+    # print(logits.shape)
     # Get the most probable boxes
     prob = F.softmax(logits, dim=-1)
     max_prob, labels = torch.max(prob, dim=-1)
 
-    print(labels)
-    # most_probable_boxes = bbox[torch.arange(bbox.size(0)), labels]
 
-    # print("Most probable boxes:", most_probable_boxes)
+
 
     # print(logits.shape, bbox.shape)
+    # Filter out the labels with probability less than 0.5 and ignore the label 100
+    valid_indices = (max_prob > 0.75) & (labels != 100)
+    filtered_labels = labels[valid_indices]
+    filtered_bbox = bbox[valid_indices]
+
+    print("Filtered Labels:", filtered_labels)
+    print("Filtered Bounding Boxes:", filtered_bbox)
+    predicted_labels = [int_to_object[label.item()] for label in filtered_labels]
+    print("Predicted Labels:", predicted_labels)
+
+    # Convert the image tensor to a numpy array and transpose it to HWC format
+    # Draw the bounding boxes on the image
+    for box, label in zip(filtered_bbox, predicted_labels):
+        x1, y1, x2, y2 = box.int().tolist()
+        cv2.rectangle(img_draw, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        cv2.putText(img_draw, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+
+    # Save or display the image
+    cv2.imwrite("results/output.jpg", img_draw)
+    # cv2.imshow("Annotated Image", img_np)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()

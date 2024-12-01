@@ -24,3 +24,5 @@ config: {'_metadata': ContainerMetadata(ref_type=typing.Any, object_type=<class 
 2024-11-27 15:07:17,563 INFO    MainThread:428732 [wandb_run.py:_redirect():1771] Redirecting console.
 2024-11-27 15:07:17,563 INFO    MainThread:428732 [wandb_run.py:_redirect():1827] Redirects installed.
 2024-11-27 15:07:17,564 INFO    MainThread:428732 [wandb_init.py:init():732] run started, returning control to user process
+2024-11-27 15:12:04,222 INFO    MainThread:428732 [wandb_run.py:_atexit_cleanup():1862] got exitcode: 255
+2024-11-27 15:12:04,224 INFO    MainThread:428732 [wandb_run.py:_restore():1834] restore
