@@ -267,7 +267,7 @@ if __name__ == "__main__":
 
 
     # load the model
-    model.load_state_dict(torch.load("scene_graph_vit.pth"))
+    model.load_state_dict(torch.load("outputs/scene-graph/checkpoints/scene-graph_run5.pt"))
 
 
 

@@ -54,7 +54,8 @@ class TextEncoder:
 #     print(vectors)
 #     print(f"Vectors shape: {vectors.shape}")
 
-
+def exists(val):
+    return val is not None
 
 def parse_objects(annotations):
     targets =  []
@@ -141,55 +142,45 @@ class RelationshipAttention(nn.Module):
 
         
 
+class MLP(nn.Module):
+    def __init__(self, dim):
+        super(MLP, self).__init__()
+        self.net = nn.Sequential(
+            nn.Linear(dim, dim),
+            nn.GELU(),
+            nn.Linear(dim, dim),
+            nn.GELU(),
+            nn.Linear(dim, dim),
+            nn.GELU(),
+            nn.LayerNorm(dim)
+        )
+
+    def forward(self, x):
+        return self.net(x)
+
         
 class SceneGraphViT(nn.Module):
     def __init__(self, 
-        cfg
+        dim,
+        num_classes,
         ):
         super(SceneGraphViT, self).__init__()
 
-        dim = cfg.model.dim
-        image_size = cfg.model.image_size
-        patch_size = cfg.model.patch_size
-        depth = cfg.model.depth
-        n_heads = cfg.model.n_heads
-        mlp_dim = cfg.model.mlp_dim
-        num_classes = cfg.model.num_classes
-
-
-        # self.vit = ViT(
-        #     dim=dim,
-        #     image_size=image_size,
-        #     patch_size=patch_size,
-        #     depth=depth,
-        #     n_heads=n_heads,
-        #     mlp_dim=mlp_dim
-        # )
-
+        # dim = cfg.model.dim
+        # image_size = cfg.model.image_size
+        # patch_size = cfg.model.patch_size
+        # depth = cfg.model.depth
+        # n_heads = cfg.model.n_heads
+        # mlp_dim = cfg.model.mlp_dim
+        # num_classes = cfg.model.num_classes
  
         self.vit = Dinov2Model.from_pretrained("facebook/dinov2-base")
         for param in self.vit.parameters():
             param.requires_grad = False
 
 
-        self.subject_head = nn.Sequential(
-            nn.Linear(dim, dim),
-            nn.GELU(),
-            nn.Linear(dim, dim),
-            nn.GELU(),
-            nn.Linear(dim, dim),
-            nn.GELU(),
-            nn.LayerNorm(dim)
-        )
-        self.object_head = nn.Sequential(
-            nn.Linear(dim, dim),
-            nn.GELU(),
-            nn.Linear(dim, dim),
-            nn.GELU(),
-            nn.Linear(dim, dim),
-            nn.GELU(),
-            nn.LayerNorm(dim)
-        )
+        self.subject_head = MLP(dim)
+        self.object_head = MLP(dim)
 
         self.relationship_attention = RelationshipAttention(dim)
 
@@ -211,7 +202,7 @@ class SceneGraphViT(nn.Module):
             nn.ReLU()
         )
 
-    def forward(self, x, annotations):
+    def forward(self, x, annotations=None):
 
         b = len(x)
 
@@ -238,6 +229,9 @@ class SceneGraphViT(nn.Module):
         bbox = self.bbox_mlp(object_relationship_embeds)
         logits = self.classifier(object_relationship_embeds)
 
+        if not exists(annotations):
+            return logits, bbox
+
         outputs = {}
         outputs['pred_logits'] = logits
         outputs['pred_boxes'] = bbox
@@ -260,8 +254,9 @@ class SceneGraphViT(nn.Module):
         matched_subject_object_indices = subject_object_indices[indx[:, 0], indx[:, 1]]
 
         targets = torch.zeros_like(scores)
+        
+        #TODO  set the matched indices to prob
         targets[matched_subject_object_indices[:, 0], matched_subject_object_indices[:, 1], matched_subject_object_indices[:, 2]] = 1
-
 
         loss_scores = torch.nn.functional.binary_cross_entropy_with_logits(scores, targets)
         loss.update({'loss_scores': loss_scores})

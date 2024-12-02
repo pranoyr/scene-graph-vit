@@ -58,5 +58,5 @@ training:
     gradient_accumulation_steps: 2
     mixed_precision: "no"
     seed: 42
-    num_epochs: 2000
+    num_epochs: 1000
     max_grad_norm: 0.1  
