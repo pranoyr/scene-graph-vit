@@ -75,7 +75,7 @@ class RelationshipAttention(nn.Module):
         # self.q = nn.Linear(dim, dim)
         # self.k = nn.Linear(dim, dim)
 
-    def forward(self, q, k, top_k_instances=100, top_k_relationships=5):
+    def forward(self, q, k, top_k_instances=300, top_k_relationships=100):
         # q = self.q(q) query - subject
         # k = self.k(k) key - object
 
@@ -172,18 +172,34 @@ class SceneGraphViT(nn.Module):
             param.requires_grad = False
 
 
-        self.subject_head = nn.Linear(dim, dim)
-        self.object_head = nn.Linear(dim, dim)
+        self.subject_head = nn.Sequential(
+            nn.Linear(dim, dim),
+            nn.GELU(),
+            nn.Linear(dim, dim),
+            nn.GELU(),
+            nn.Linear(dim, dim),
+            nn.GELU(),
+            nn.LayerNorm(dim)
+        )
+        self.object_head = nn.Sequential(
+            nn.Linear(dim, dim),
+            nn.GELU(),
+            nn.Linear(dim, dim),
+            nn.GELU(),
+            nn.Linear(dim, dim),
+            nn.GELU(),
+            nn.LayerNorm(dim)
+        )
 
         self.relationship_attention = RelationshipAttention(dim)
 
         self.matcher = HungarianMatcher()
 
 
-        weight_dict = {'loss_ce': 1, 'loss_bbox': 5}
-        weight_dict['loss_giou'] = 2
+        weight_dict = {'loss_ce': 1, 'loss_bbox': 1}
+        weight_dict['loss_giou'] = 1
 
-        weight_dict['loss_scores'] = 5
+        weight_dict['loss_scores'] = 1
 
         losses = ['labels', 'boxes', 'cardinality']
         self.criterion = SetCriterion(num_classes, matcher=self.matcher, weight_dict=weight_dict,
@@ -203,7 +219,10 @@ class SceneGraphViT(nn.Module):
         x = x.last_hidden_state
         
         subject_logits = self.subject_head(x)
+        subject_logits = x + subject_logits
+
         object_logits = self.object_head(x)
+        object_logits = x + object_logits
 
         # compute relationship attention ,  relationship_embeds - Rij => (b, number of relationships, dim)
         scores, subject_object_indices, relationship_embeds = self.relationship_attention(q=subject_logits, k=object_logits)
@@ -228,7 +247,7 @@ class SceneGraphViT(nn.Module):
         # loss function
         matched_indices , loss = self.criterion(outputs, targets)
         
-        # loss function for relationship scores
+        # loss function for relationship scores (self-supervised with class-logits)
         num_objects = outputs['pred_logits'].shape[1]
         indx = []
         s = 0

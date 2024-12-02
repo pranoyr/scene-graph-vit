@@ -1,8 +1,0 @@
-{'loss_ce': 1, 'loss_bbox': 5, 'loss_giou': 2, 'loss_scores': 1}
-{'loss_ce': tensor(4.3929, device='cuda:0', grad_fn=<NllLoss2DBackward0>), 'class_error': tensor(95., device='cuda:0'), 'loss_bbox': tensor(490.0465, device='cuda:0', grad_fn=<DivBackward0>), 'loss_giou': tensor(1.1685, device='cuda:0', grad_fn=<DivBackward0>), 'cardinality_error': tensor(76.1250, device='cuda:0'), 'loss_scores': tensor(0.6950, device='cuda:0',
-       grad_fn=<BinaryCrossEntropyWithLogitsBackward0>)}
-INFO:root:Train dataset size: 3780
-INFO:root:Val dataset size: 954
-INFO:root:Number of iterations per epoch: 15
-INFO:root:Total training iterations: 3000
-  0%|                                                                                                                                                                                | 0/473 [00:00<?, ?it/s]INFO:root:Saving checkpoint: outputs/scene-graph/checkpoints/scene-graph_run1.pt ...

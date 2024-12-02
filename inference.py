@@ -180,8 +180,25 @@ class SceneGraphViT(nn.Module):
         for param in self.vit.parameters():
             param.requires_grad = False
 
-        self.subject_head = nn.Linear(dim, dim)
-        self.object_head = nn.Linear(dim, dim)
+        self.subject_head = nn.Sequential(
+            nn.Linear(dim, dim),
+            nn.GELU(),
+            nn.Linear(dim, dim),
+            nn.GELU(),
+            nn.Linear(dim, dim),
+            nn.GELU(),
+            nn.LayerNorm(dim)
+        )
+        self.object_head = nn.Sequential(
+            nn.Linear(dim, dim),
+            nn.GELU(),
+            nn.Linear(dim, dim),
+            nn.GELU(),
+            nn.Linear(dim, dim),
+            nn.GELU(),
+            nn.LayerNorm(dim)
+        )
+
 
         self.relationship_attention = RelationshipAttention(dim)
 
@@ -209,7 +226,10 @@ class SceneGraphViT(nn.Module):
         x = x.last_hidden_state
         
         subject_logits = self.subject_head(x)
+        subject_logits = x + subject_logits
+
         object_logits = self.object_head(x)
+        object_logits = x + object_logits
 
         # compute relationship attention ,  relationship_embeds - Rij => (b, number of relationships, dim)
         scores, subject_object_indices, relationship_embeds = self.relationship_attention(q=subject_logits, k=object_logits)
@@ -244,7 +264,7 @@ if __name__ == "__main__":
     
 
     # load the model
-    ckpt = torch.load("outputs/scene-graph/checkpoints/scene-graph_run3.pt")
+    ckpt = torch.load("outputs/scene-graph/checkpoints/scene-graph_run4.pt")
 
     model.load_state_dict(ckpt['state_dict'])
 
@@ -295,7 +315,7 @@ if __name__ == "__main__":
 
     # print(logits.shape, bbox.shape)
     # Filter out the labels with probability less than 0.5 and ignore the label 100
-    valid_indices = (max_prob > 0.75) & (labels != 100)
+    valid_indices = (max_prob > 0.7) & (labels != 100)
     filtered_labels = labels[valid_indices]
     filtered_bbox = bbox[valid_indices]
 

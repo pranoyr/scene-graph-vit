@@ -1,13 +1,13 @@
 experiment:
     project_name: scene-graph
-    exp_name: run3
+    exp_name: run5
     max_train_examples: 10000000 # not used
     save_every: 1000
     eval_every: 500
     sample_every: 10000000 # not used
     log_every: 500
     log_level: info
-    resume_path_from_checkpoint: 
+    resume_path_from_checkpoint: null
 
 
 model:
@@ -40,24 +40,23 @@ dataset:
         scale : 1.0
 
 optimizer:
-    name: adam
+    name: adamw
     params: 
-        learning_rate: 0.0001
+        learning_rate: 5e-5
         beta1: 0.9
-        beta2: 0.96
-        weight_decay: 0.0
-        epsilon: 1e-8
+        beta2: 0.999
+        weight_decay: 1e-4
 
 lr_scheduler:
-    name: constant_with_warmup
+    name: cosine_with_warmup
     params:
         learning_rate: ${optimizer.params.learning_rate}
-        warmup_steps: 4000
+        warmup_steps: 1000
         decay_steps: null
 
 training:
-    gradient_accumulation_steps: 4
+    gradient_accumulation_steps: 2
     mixed_precision: "no"
     seed: 42
-    num_epochs: 1000
-    max_grad_norm: null
+    num_epochs: 2000
+    max_grad_norm: 0.1  

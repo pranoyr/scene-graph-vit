@@ -17,31 +17,35 @@ import torch
 
 
 def get_scheduler(cfg, optimizer , **kwargs):
-    warmup_steps = cfg.lr_scheduler.params.warmup_steps
-    
-    if cfg.lr_scheduler.name == "constant_with_warmup":
-        scheduler = get_constant_schedule_with_warmup(optimizer, num_warmup_steps=warmup_steps)
-    elif cfg.lr_scheduler.name == "cosine_with_warmup":
-        scheduler = get_cosine_schedule_with_warmup(optimizer, num_warmup_steps=warmup_steps, num_training_steps=kwargs["decay_steps"])
+	warmup_steps = cfg.lr_scheduler.params.warmup_steps
+	
+	if cfg.lr_scheduler.name == "constant_with_warmup":
+		scheduler = get_constant_schedule_with_warmup(optimizer, num_warmup_steps=warmup_steps)
+	elif cfg.lr_scheduler.name == "cosine_with_warmup":
+		scheduler = get_cosine_schedule_with_warmup(optimizer, num_warmup_steps=warmup_steps, num_training_steps=kwargs["decay_steps"])
+	else:
+		raise ValueError(f"Unknown scheduler: {cfg.lr_scheduler.name}")
 
-    return scheduler
+	return scheduler
 
 
 
 def get_optimizer(cfg, params):
-    lr = cfg.optimizer.params.learning_rate
-    warmup_steps = cfg.lr_scheduler.params.warmup_steps
-    beta1 = cfg.optimizer.params.beta1
-    beta2 = cfg.optimizer.params.beta2
-    decay_steps = cfg.lr_scheduler.params.decay_steps
-    weight_decay = cfg.optimizer.params.weight_decay
-    
-    if cfg.optimizer.name == "adamw":
-        optimizer = torch.optim.AdamW(params, lr=lr, betas=(beta1, beta2), weight_decay=weight_decay)
-    elif cfg.optimizer.name == "adam":
-        optimizer = torch.optim.Adam(params, lr=lr, betas=(beta1, beta2), weight_decay=weight_decay)
+	lr = cfg.optimizer.params.learning_rate
+	warmup_steps = cfg.lr_scheduler.params.warmup_steps
+	beta1 = cfg.optimizer.params.beta1
+	beta2 = cfg.optimizer.params.beta2
+	decay_steps = cfg.lr_scheduler.params.decay_steps
+	weight_decay = cfg.optimizer.params.weight_decay
+	
+	if cfg.optimizer.name == "adamw":
+		optimizer = torch.optim.AdamW(params, lr=lr, betas=(beta1, beta2), weight_decay=weight_decay)
+	elif cfg.optimizer.name == "adam":
+		optimizer = torch.optim.Adam(params, lr=lr, betas=(beta1, beta2), weight_decay=weight_decay)
+	else:
+		raise ValueError(f"Unknown optimizer: {cfg.optimizer.name}")
 
-    return optimizer
+	return optimizer
 
 
 
@@ -90,6 +94,7 @@ class BaseTrainer(object):
 		if cfg.experiment.resume_path_from_checkpoint:
 			path = cfg.experiment.resume_path_from_checkpoint
 			self.resume_from_checkpoint(path)
+
 	
 	
 		# Checkpoint and generated images folder
@@ -111,7 +116,13 @@ class BaseTrainer(object):
 		logging.info(f"Number of iterations per epoch: {self.num_iters_per_epoch}")
 		logging.info(f"Total training iterations: {self.total_iters}")
 
-		
+
+		# Training parameters
+		self.decay_steps = cfg.lr_scheduler.params.decay_steps
+		if not self.decay_steps:
+			self.decay_steps = self.num_epoch * self.num_iters_per_epoch
+
+	
 	@property
 	def device(self):
 		return self.accelerator.device
@@ -163,17 +174,10 @@ class SceneGraphTrainer(BaseTrainer):
 		):
 		super().__init__(cfg, model, dataloaders)
   
-		# Training parameters
-		decay_steps = cfg.lr_scheduler.params.decay_steps
-
-  
-		if not decay_steps:
-			decay_steps = self.num_epoch * self.num_iters_per_epoch
-
-
+		
 		params = self.model.parameters()
 		self.optim = get_optimizer(cfg, params)
-		self.scheduler = get_scheduler(cfg, self.optim, decay_steps=decay_steps)
+		self.scheduler = get_scheduler(cfg, self.optim, decay_steps=self.decay_steps)
 
 		(
 			self.model,
@@ -188,15 +192,7 @@ class SceneGraphTrainer(BaseTrainer):
 			self.train_dl
 	 )
 		
-		# logging details
-		self.num_epoch = cfg.training.num_epochs
-		self.save_every = cfg.experiment.save_every
-		self.sample_every = cfg.experiment.sample_every
-		self.eval_every = cfg.experiment.eval_every
-		self.log_every = cfg.experiment.log_every
-		self.max_grad_norm = cfg.training.max_grad_norm
-		
-  
+
 	def train(self):
 		start_epoch=self.global_step//len(self.train_dl)
 		self.model.train()
