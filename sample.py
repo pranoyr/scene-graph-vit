@@ -219,6 +219,13 @@ class SceneGraphViT(nn.Module):
         bbox = self.bbox_mlp(object_relationship_embeds)
         logits = self.classifier(object_relationship_embeds)
 
+        # softtmax
+        logits_prob = torch.softmax(logits, dim=-1)
+        logits_top_1_scores = torch.topk(logits_prob, k=1, dim=-1)[0]
+
+        print(logits_top_1_scores)
+
+
         outputs = {}
         outputs['pred_logits'] = logits
         outputs['pred_boxes'] = bbox
@@ -238,10 +245,28 @@ class SceneGraphViT(nn.Module):
             s += num_objects
         indx = torch.tensor(indx)
 
+        
+
         matched_subject_object_indices = subject_object_indices[indx[:, 0], indx[:, 1]]
 
+    
         targets = torch.zeros_like(scores)
-        targets[matched_subject_object_indices[:, 0], matched_subject_object_indices[:, 1], matched_subject_object_indices[:, 2]] = 0
+
+        print(matched_indices)
+
+        print(targets.shape)
+        print(logits.shape)
+        print(matched_subject_object_indices)
+
+
+        print(subject_object_indices.shape)
+
+        print(matched_subject_object_indices)
+
+        targets[matched_subject_object_indices[:, 0], matched_subject_object_indices[:, 1], matched_subject_object_indices[:, 2]] = 1
+
+        # for i, (x, y, z) in enumerate(matched_subject_object_indices):
+        #     targets[x, y, z] = y[i // 2][i % 2]
 
 
         loss_scores = torch.nn.functional.binary_cross_entropy_with_logits(scores, targets)
@@ -267,7 +292,7 @@ if __name__ == "__main__":
 
 
     # load the model
-    model.load_state_dict(torch.load("outputs/scene-graph/checkpoints/scene-graph_run5.pt"))
+    # model.load_state_dict(torch.load("outputs/scene-graph/checkpoints/scene-graph_run5.pt"))
 
 
 

@@ -229,6 +229,8 @@ class SceneGraphViT(nn.Module):
         bbox = self.bbox_mlp(object_relationship_embeds)
         logits = self.classifier(object_relationship_embeds)
 
+        preds_topk = torch.topk(logits, k=1, dim=-1)[0]
+
         if not exists(annotations):
             return logits, bbox
 
@@ -256,7 +258,15 @@ class SceneGraphViT(nn.Module):
         targets = torch.zeros_like(scores)
         
         #TODO  set the matched indices to prob
-        targets[matched_subject_object_indices[:, 0], matched_subject_object_indices[:, 1], matched_subject_object_indices[:, 2]] = 1
+        # targets[matched_subject_object_indices[:, 0], matched_subject_object_indices[:, 1], matched_subject_object_indices[:, 2]] = 1
+        for i, (batch_idx, row_idx, col_idx) in enumerate(matched_subject_object_indices):
+            # Get batch number and position within that batch
+            b = batch_idx.item()
+            # Find position within the batch by counting previous occurrences of this batch number
+            pos = (matched_subject_object_indices[:i+1, 0] == b).sum() - 1
+            # Assign the corresponding value from preds_topk
+            targets[b, row_idx, col_idx] = preds_topk[b][pos].item()
+
 
         loss_scores = torch.nn.functional.binary_cross_entropy_with_logits(scores, targets)
         loss.update({'loss_scores': loss_scores})

@@ -89,13 +89,17 @@ class BaseTrainer(object):
 		self.sample_every = cfg.experiment.sample_every
 		self.log_every = cfg.experiment.log_every
 		self.eval_every = cfg.experiment.eval_every
+
+		# Training parameters
+		self.decay_steps = cfg.lr_scheduler.params.decay_steps
+		if not self.decay_steps:
+			self.decay_steps = self.num_epoch * len(self.train_dl)
 		
 		# Resume from ckpt
 		if cfg.experiment.resume_path_from_checkpoint:
 			path = cfg.experiment.resume_path_from_checkpoint
 			self.resume_from_checkpoint(path)
 
-	
 	
 		# Checkpoint and generated images folder
 		output_folder = f"outputs/{cfg.experiment.project_name}"
@@ -116,11 +120,6 @@ class BaseTrainer(object):
 		logging.info(f"Number of iterations per epoch: {self.num_iters_per_epoch}")
 		logging.info(f"Total training iterations: {self.total_iters}")
 
-
-		# Training parameters
-		self.decay_steps = cfg.lr_scheduler.params.decay_steps
-		if not self.decay_steps:
-			self.decay_steps = self.num_epoch * self.num_iters_per_epoch
 
 	
 	@property

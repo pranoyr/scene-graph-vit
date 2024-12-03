@@ -10,3 +10,5 @@
 *.pyc
 /experiments
 /wandb
+sample.py
+*.jpg
