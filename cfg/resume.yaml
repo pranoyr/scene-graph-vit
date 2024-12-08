@@ -1,0 +1,61 @@
+experiment:
+    project_name: scene-graph
+    exp_name: resume_run1
+    max_train_examples: 10000000 # not used
+    save_every: 1000
+    eval_every: 500
+    sample_every: 10000000 # not used
+    log_every: 500
+    log_level: info
+    resume_path_from_checkpoint: outputs/scene-graph/checkpoints/scene-graph_run5.pt
+
+
+model:
+    name: scene-graph
+    dim : 768
+    patch_size : 32
+    n_heads : 16
+    depth : 12
+    mlp_dim : 2048
+    num_classes : 100
+
+
+dataset:
+    name: vrd
+    params:
+        root_path:   /home/pranoy/Downloads/vrd
+        num_workers: 4
+        pin_memory: True
+        batch_size: 8
+        persistent_workers: True
+        shuffle : True
+    preprocessing:
+        resolution: 840
+        center_crop: False
+        random_flip: True
+        random_crop: True
+        mean : null
+        std : null
+        scale : 1.0
+
+optimizer:
+    name: adamw
+    params: 
+        learning_rate: 2.21e-15
+        beta1: 0.9
+        beta2: 0.999
+        weight_decay: 1e-4
+
+lr_scheduler:
+    name: null
+    params:
+        learning_rate: ${optimizer.params.learning_rate}
+        warmup_steps: 1000
+        decay_steps: null
+
+training:
+    gradient_accumulation_steps: 2
+    mixed_precision: "no"
+    seed: 42
+    num_epochs: 1000
+    max_grad_norm: 0.1  
