@@ -37,8 +37,7 @@ if __name__=="__main__":
     select_log_level(cfg)
     
     # build the model, data loader and trainer
-    model = SceneGraphViT(dim=cfg.model.dim,
-                         num_classes=cfg.model.num_classes)
+    model = SceneGraphViT(cfg)
     data_loaders = build_dataset(cfg)
     trainer = SceneGraphTrainer(cfg, model, data_loaders)
     

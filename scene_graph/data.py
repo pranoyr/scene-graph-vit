@@ -9,8 +9,11 @@ import torch
 from PIL import Image
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms, utils
+from transformers import CLIPProcessor, CLIPVisionModel
+from transformers import AutoImageProcessor, AutoModel
+from types import SimpleNamespace
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cpu' if torch.cuda.is_available() else 'cpu')
 
 
 def y1y2x1x2_to_x1y1x2y2(y1y2x1x2):
@@ -41,9 +44,19 @@ def make_image_list(dataset_path, type):
 class VRDDataset(Dataset):
 	"""VRD dataset."""
 
-	def __init__(self, dataset_path, image_set):
-		self.dataset_path = dataset_path
+	def __init__(self, cfg, image_set):
 		self.image_set = image_set
+
+		self.dataset_path = cfg.dataset.params.root_path
+		self.image_set = image_set
+		self.image_size = cfg.dataset.preprocessing.resolution
+
+
+		# self.transform = CLIPProcessor.from_pretrained(cfg.model.name)
+		#   # Update processor's configuration to use new resolution
+		# self.transform.feature_extractor.size = self.image_size
+		# self.transform.feature_extractor.crop_size = self.image_size
+
 		# read annotations file
 		with open(os.path.join(self.dataset_path, 'json_dataset', f'annotations_{self.image_set}.json'), 'r') as f:
 			self.annotations = json.load(f)
@@ -67,7 +80,7 @@ class VRDDataset(Dataset):
 		self.imgs_list = make_image_list(self.dataset_path, self.image_set)
 
 		self.transform = transforms.Compose([
-			transforms.Resize((256, 256)),
+			transforms.Resize((self.image_size, self.image_size)),
 			transforms.ToTensor(),
 			transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 		])
@@ -91,8 +104,8 @@ class VRDDataset(Dataset):
 		"""
 
 		orig_w, orig_h = original_size
-		scale_w = 256 / orig_w
-		scale_h = 256 / orig_h
+		scale_w = self.image_size / orig_w
+		scale_h = self.image_size  / orig_h
 		transformed_boxes = []
 	
 		for box in boxes:
@@ -146,6 +159,7 @@ class VRDDataset(Dataset):
 		img = Image.open(img_path)
 		original_size = img.size
 		boxes, labels, preds = self.load_pascal_annotation(img_name, original_size)
+		# img = self.transform(images=img, return_tensors="pt").pixel_values[0]
 		img = self.transform(img)
 
 		
@@ -172,8 +186,8 @@ def collater(data):
 
 
 def build_dataset(cfg):
-	train_dataset = VRDDataset(cfg.dataset.params.root_path, "train")
-	val_dataset = VRDDataset(cfg.dataset.params.root_path, "test")
+	train_dataset = VRDDataset(cfg, "train")
+	val_dataset = VRDDataset(cfg, "test")
 	train_loader = DataLoader(train_dataset, batch_size=cfg.dataset.params.batch_size,
 							  shuffle=cfg.dataset.params.shuffle, collate_fn=collater)
 	val_loader = DataLoader(val_dataset, batch_size=cfg.dataset.params.batch_size,
@@ -183,7 +197,27 @@ def build_dataset(cfg):
 
 
 if __name__ == '__main__':
-	dataset = VRDDataset("/Users/pranoy/Downloads/vrd", "train")
+
+	
+	cfg = SimpleNamespace(
+		dataset=SimpleNamespace(
+			params=SimpleNamespace(
+				root_path="/home/pranoy/Downloads/vrd",
+				batch_size=2,
+				shuffle=True,
+				resolution=768
+			),
+			preprocessing=SimpleNamespace(
+				resolution=768
+			)
+		),
+		model=SimpleNamespace(
+			name="openai/clip-vit-base-patch32"
+		)
+	)
+
+
+	dataset = VRDDataset(cfg, "train")
 	dataloader = DataLoader(dataset, batch_size=2, shuffle=True, collate_fn=collater)
 	for i, data in enumerate(dataloader):
 		imgs, annotations = data
@@ -206,7 +240,10 @@ if __name__ == '__main__':
 					plt.plot([x1, x2, x2, x1, x1], [y1, y1, y2, y2, y1], color='r')
 				
 			
-			plt.show()
+			plt.savefig(f'output_{i}_{j}.png')
+	
+	
+
 	
 
 		break

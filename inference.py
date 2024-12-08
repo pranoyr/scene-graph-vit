@@ -21,14 +21,30 @@ from scene_graph.model import SceneGraphViT
 
 if __name__ == "__main__":
 
+
+    # model:
+    # name: vit
+    # dim : 768
+    # patch_size : 32
+    # n_heads : 12
+    # depth : 12
+    # mlp_dim : 3072
+    # num_classes : 100
+
+
     model = SceneGraphViT(
     dim=768,
-    num_classes=100
+    image_size=768,
+    patch_size=32,
+    num_classes=100,
+    n_heads=12,
+    depth=12,
+    mlp_dim=3072,
     )
     
 
     # load the model
-    ckpt = torch.load("outputs/scene-graph/checkpoints/scene-graph_run5.pt")
+    ckpt = torch.load("outputs/scene-graph/checkpoints/scene-graph_run6.pt")
 
     model.load_state_dict(ckpt['state_dict'])
 
@@ -48,7 +64,7 @@ if __name__ == "__main__":
 
 
     transform = transforms.Compose([
-			transforms.Resize((256, 256)),
+			transforms.Resize((768, 768)),
 			transforms.ToTensor(),
 			transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 		])
@@ -61,7 +77,7 @@ if __name__ == "__main__":
     image_path = sys.argv[1]
     img = Image.open(image_path)
     img_draw = np.array(img)
-    img_draw = cv2.resize(img_draw, (256, 256))
+    img_draw = cv2.resize(img_draw, (768, 768))
     img = transform(img).unsqueeze(0)
     logits, bbox = model(img)
 

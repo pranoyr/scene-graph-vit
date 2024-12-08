@@ -7,6 +7,7 @@ import torch.nn.functional as F
 from transformers import CLIPTokenizer, CLIPTextModel
 from .matcher import HungarianMatcher, SetCriterion
 from transformers import AutoImageProcessor, Dinov2Model
+from .clip_vit import get_clip_vit_model
 
 class TextEncoder:
     def __init__(self, model_name="openai/clip-vit-base-patch32"):
@@ -76,7 +77,7 @@ class RelationshipAttention(nn.Module):
         # self.q = nn.Linear(dim, dim)
         # self.k = nn.Linear(dim, dim)
 
-    def forward(self, q, k, top_k_instances=300, top_k_relationships=100):
+    def forward(self, q, k, top_k_instances=512, top_k_relationships=32):
         # q = self.q(q) query - subject
         # k = self.k(k) key - object
 
@@ -157,30 +158,73 @@ class MLP(nn.Module):
 
     def forward(self, x):
         return self.net(x)
+    
+# 2 Layer MLP
+class MLP2(nn.Module):
+    def __init__(self, dim):
+        super(MLP2, self).__init__()
+        self.net = nn.Sequential(
+            nn.Linear(dim, dim),
+            nn.GELU(),
+            nn.Linear(dim, dim),
+            nn.LayerNorm(dim)
+        )
 
+    def forward(self, x):
+        return self.net(x)
+    
+
+class VitBackbone(nn.Module):
+    def __init__(self, cfg
+        ):
+        super(VitBackbone, self).__init__()
+
+        self.cfg = cfg
+        
+        if cfg.model.name == "vit":
+            self.model = ViT(
+                dim=cfg.model.dim,
+                image_size=cfg.dataset.preprocessing.resolution,
+                patch_size=cfg.model.patch_size,
+                depth=cfg.model.depth,
+                n_heads=cfg.model.n_heads,
+                mlp_dim=cfg.model.mlp_dim
+            )
+        if cfg.model.name.split("/")[0] == "clip":
+            self.model = get_clip_vit_model(cfg.model.name, target_resolution=cfg.dataset.preprocessing.resolution)
+        elif cfg.model.name.split("/")[0] == "facebook":
+            self.model = Dinov2Model.from_pretrained(cfg.model.name)
+
+        if cfg.model.freeze:
+            for param in self.model.parameters():
+                    param.requires_grad = False
+
+    def forward(self, x):
+        if self.cfg.model.name == "vit":
+                x = self.model(x)
+        else:
+                x = self.model(x, output_hidden_states=True)
+                # Get last hidden state: [batch_size, num_patches + 1, hidden_dim]
+                x = x.last_hidden_state
+        return x
+            
+        
         
 class SceneGraphViT(nn.Module):
     def __init__(self, 
-        dim,
-        num_classes,
+        cfg,
         ):
         super(SceneGraphViT, self).__init__()
 
-        # dim = cfg.model.dim
-        # image_size = cfg.model.image_size
-        # patch_size = cfg.model.patch_size
-        # depth = cfg.model.depth
-        # n_heads = cfg.model.n_heads
-        # mlp_dim = cfg.model.mlp_dim
-        # num_classes = cfg.model.num_classes
- 
-        self.vit = Dinov2Model.from_pretrained("facebook/dinov2-base")
-        for param in self.vit.parameters():
-            param.requires_grad = False
-
-
+        dim = cfg.model.dim
+        num_classes = cfg.model.num_classes
+      
+        self.vit = VitBackbone(cfg)
+        
         self.subject_head = MLP(dim)
         self.object_head = MLP(dim)
+
+        self.mlp = MLP2(dim)
 
         self.relationship_attention = RelationshipAttention(dim)
 
@@ -205,10 +249,9 @@ class SceneGraphViT(nn.Module):
     def forward(self, x, annotations=None):
 
         b = len(x)
-
-        x = self.vit(x)
-        x = x.last_hidden_state
         
+        x = self.vit(x)
+    
         subject_logits = self.subject_head(x)
         subject_logits = x + subject_logits
 
@@ -217,6 +260,9 @@ class SceneGraphViT(nn.Module):
 
         # compute relationship attention ,  relationship_embeds - Rij => (b, number of relationships, dim)
         scores, subject_object_indices, relationship_embeds = self.relationship_attention(q=subject_logits, k=object_logits)
+
+        # 2 layer MLP
+        relationship_embeds = self.mlp(relationship_embeds)
 
         # object instances => subject == object
         object_indices = torch.where(subject_object_indices[:, :, 1] == subject_object_indices[:, :, 2])
@@ -229,7 +275,8 @@ class SceneGraphViT(nn.Module):
         bbox = self.bbox_mlp(object_relationship_embeds)
         logits = self.classifier(object_relationship_embeds)
 
-        preds_topk = torch.topk(logits, k=1, dim=-1)[0]
+        logits_softmax = torch.softmax(logits, dim=-1)
+        preds_topk = torch.topk(logits_softmax, k=1, dim=-1)[0]
 
         if not exists(annotations):
             return logits, bbox

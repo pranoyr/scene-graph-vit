@@ -23,6 +23,8 @@ def get_scheduler(cfg, optimizer , **kwargs):
 		scheduler = get_constant_schedule_with_warmup(optimizer, num_warmup_steps=warmup_steps)
 	elif cfg.lr_scheduler.name == "cosine_with_warmup":
 		scheduler = get_cosine_schedule_with_warmup(optimizer, num_warmup_steps=warmup_steps, num_training_steps=kwargs["decay_steps"])
+	elif not cfg.lr_scheduler.name:
+		scheduler = None
 	else:
 		raise ValueError(f"Unknown scheduler: {cfg.lr_scheduler.name}")
 
@@ -211,7 +213,8 @@ class SceneGraphTrainer(BaseTrainer):
 							if self.accelerator.sync_gradients and self.max_grad_norm:
 								self.accelerator.clip_grad_norm_(self.model.parameters(), self.max_grad_norm)
 							self.optim.step()
-							self.scheduler.step(self.global_step)
+							if self.cfg.lr_scheduler.name:
+								self.scheduler.step(self.global_step)
 							self.optim.zero_grad()
 							
 							
@@ -228,7 +231,11 @@ class SceneGraphTrainer(BaseTrainer):
 		
 						if not (self.global_step % self.gradient_accumulation_steps):
 							lr = self.optim.param_groups[0]['lr']
-							self.accelerator.log({"loss": losses.item(), "lr": lr}, step=self.global_step)
+							logs = {"total_loss": losses.item(), "lr": lr}
+							for k, v in loss_dict.items():
+								if k in weight_dict:
+									logs[k] = v.item()
+							self.accelerator.log(logs, step=self.global_step)
 				
 						self.global_step += 1
 	  
