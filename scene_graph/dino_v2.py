@@ -16,18 +16,34 @@
 from transformers import AutoImageProcessor, AutoModel
 from PIL import Image
 import requests
+from torchvision import transforms, utils
+
+
+transforms = transforms.Compose([
+    transforms.Resize((518, 518)),
+    transforms.ToTensor()
+])
 
 url = 'http://images.cocodataset.org/val2017/000000039769.jpg'
 image = Image.open(requests.get(url, stream=True).raw)
 
-processor = AutoImageProcessor.from_pretrained('facebook/dinov2-large')
-model = AutoModel.from_pretrained('facebook/dinov2-large')
+# processor = AutoImageProcessor.from_pretrained('facebook/dinov2-giant', size=518)
+model = AutoModel.from_pretrained('facebook/dinov2-giant')
 
-inputs = processor(images=image, return_tensors="pt")
+inputs = transforms(image).unsqueeze(0)
 
-print(inputs.pixel_values.shape)
-outputs = model(**inputs)
+
+# inputs = processor(images=image, 
+#                   size={'height': 518, 'width': 518},  # Explicit size dict
+#                   return_tensors="pt")
+
+
+outputs = model(inputs)
 last_hidden_states = outputs.last_hidden_state
+# remove the class token
+last_hidden_states = last_hidden_states[:, 1:, :]
+
+print(last_hidden_states.shape)
 
 
 

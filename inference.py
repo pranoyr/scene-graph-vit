@@ -15,36 +15,75 @@ import cv2
 import numpy as np
 import sys
 from scene_graph.model import SceneGraphViT
+from types import SimpleNamespace
 
 
 
 
 if __name__ == "__main__":
 
+# model:
+#     name: facebook/dinov2-base
+#     dim : 768 # give the dimension of the model
+#     freeze : True
+#     num_classes : 100
+    
+#     # used only for vit
+#     patch_size : 32 
+#     n_heads : 12        
+#     depth : 12
+#     mlp_dim : 3072
+    
+    
+# dataset:
+#     name: vrd
+#     params:
+#         root_path:   /home/pranoy/Downloads/vrd
+#         num_workers: 4
+#         pin_memory: True
+#         batch_size: 8
+#         persistent_workers: True
+#         shuffle : True
+#     preprocessing:
+#         resolution: 768
+#         center_crop: False
+#         random_flip: True
+#         random_crop: True
+#         mean : null
+#         std : null
+#         scale : 1.0
 
-    # model:
-    # name: vit
-    # dim : 768
-    # patch_size : 32
-    # n_heads : 12
-    # depth : 12
-    # mlp_dim : 3072
-    # num_classes : 100
 
-
-    model = SceneGraphViT(
-    dim=768,
-    image_size=768,
-    patch_size=32,
-    num_classes=100,
-    n_heads=12,
-    depth=12,
-    mlp_dim=3072,
+    cfg = SimpleNamespace(
+        dataset=SimpleNamespace(
+            params=SimpleNamespace(
+                root_path="/home/pranoy/Downloads/vrd",
+                batch_size=2,
+                shuffle=True,
+                resolution=768
+            ),
+            preprocessing=SimpleNamespace(
+                resolution=768
+            )
+        ),
+        model=SimpleNamespace(
+            name="facebook/dinov2-base",
+            dim=768,
+            freeze=True,
+            num_classes=100,
+            patch_size=32,
+            n_heads=12,
+            depth=12,
+            mlp_dim=3072
+        )
     )
+
+
+    model = SceneGraphViT(cfg)
     
 
     # load the model
-    ckpt = torch.load("outputs/scene-graph/checkpoints/scene-graph_run6.pt")
+    ckpt = torch.load("outputs/scene-graph/checkpoints/scene-graph_dinov2-base-run1.pt")
 
     model.load_state_dict(ckpt['state_dict'])
 
@@ -95,7 +134,7 @@ if __name__ == "__main__":
 
     # print(logits.shape, bbox.shape)
     # Filter out the labels with probability less than 0.5 and ignore the label 100
-    valid_indices = (max_prob > 0.7) & (labels != 100)
+    valid_indices = (max_prob > 0.5) & (labels != 100)
     filtered_labels = labels[valid_indices]
     filtered_bbox = bbox[valid_indices]
 

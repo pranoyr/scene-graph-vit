@@ -9,6 +9,7 @@ from .matcher import HungarianMatcher, SetCriterion
 from transformers import AutoImageProcessor, Dinov2Model
 from .clip_vit import get_clip_vit_model
 import os
+import logging
 
 class TextEncoder:
     def __init__(self, model_name="openai/clip-vit-base-patch32"):
@@ -192,16 +193,16 @@ class VitBackbone(nn.Module):
                 mlp_dim=cfg.model.mlp_dim
             )
 
-        # take the base
         model_name_prefix = cfg.model.name.split(os.sep)[0]
         if model_name_prefix == "clip":
             self.model = get_clip_vit_model(cfg.model.name, target_resolution=cfg.dataset.preprocessing.resolution)
         elif model_name_prefix == "facebook":
             self.model = Dinov2Model.from_pretrained(cfg.model.name)
 
-        if cfg.model.freeze:
+        if cfg.model.freeze: 
             for param in self.model.parameters():
                     param.requires_grad = False
+            logging.info("Model is frozen")
 
     def forward(self, x):
         if self.cfg.model.name == "vit":
@@ -210,6 +211,7 @@ class VitBackbone(nn.Module):
                 x = self.model(x, output_hidden_states=True)
                 # Get last hidden state: [batch_size, num_patches + 1, hidden_dim]
                 x = x.last_hidden_state
+                x = x[:, 1:, :]
         return x
             
         
