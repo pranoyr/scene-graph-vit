@@ -79,7 +79,7 @@ class RelationshipAttention(nn.Module):
         # self.q = nn.Linear(dim, dim)
         # self.k = nn.Linear(dim, dim)
 
-    def forward(self, q, k, top_k_instances=100, top_k_relationships=2):
+    def forward(self, q, k, top_k_instances=512, top_k_relationships=32):
         # q = self.q(q) query - subject
         # k = self.k(k) key - object
 

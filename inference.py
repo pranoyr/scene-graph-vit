@@ -16,44 +16,49 @@ import numpy as np
 import sys
 from scene_graph.model import SceneGraphViT
 from types import SimpleNamespace
+import matplotlib.pyplot as plt
 import random
 
 
 
 
+# colors for visualization
+COLORS = [[0.000, 0.447, 0.741], [0.850, 0.325, 0.098], [0.929, 0.694, 0.125],
+          [0.494, 0.184, 0.556], [0.466, 0.674, 0.188], [0.301, 0.745, 0.933]]
+
+
+# for output bounding box post-processing
+def box_cxcywh_to_xyxy(x):
+    x_c, y_c, w, h = x.unbind(1)
+    b = [(x_c - 0.5 * w), (y_c - 0.5 * h),
+         (x_c + 0.5 * w), (y_c + 0.5 * h)]
+    return torch.stack(b, dim=1)
+
+def rescale_bboxes(out_bbox, size):
+    img_w, img_h = size
+    b = box_cxcywh_to_xyxy(out_bbox)
+    b = b * torch.tensor([img_w, img_h, img_w, img_h], dtype=torch.float32)
+    return b
+
+
+def plot_results(pil_img, prob, boxes):
+    plt.figure(figsize=(16,10))
+    plt.imshow(pil_img)
+    ax = plt.gca()
+    for p, (xmin, ymin, xmax, ymax), c in zip(prob, boxes.tolist(), COLORS * 100):
+        ax.add_patch(plt.Rectangle((xmin, ymin), xmax - xmin, ymax - ymin,
+                                   fill=False, color=c, linewidth=3))
+        cl = p.argmax()
+        text = f'{CLASSES[cl]}: {p[cl]:0.2f}'
+        ax.text(xmin, ymin, text, fontsize=15,
+                bbox=dict(facecolor='yellow', alpha=0.5))
+    plt.axis('off')
+    # save the image    
+    plt.savefig("output.jpg")
+    
+
+
 if __name__ == "__main__":
-
-# model:
-#     name: facebook/dinov2-base
-#     dim : 768 # give the dimension of the model
-#     freeze : True
-#     num_classes : 100
-    
-#     # used only for vit
-#     patch_size : 32 
-#     n_heads : 12        
-#     depth : 12
-#     mlp_dim : 3072
-    
-    
-# dataset:
-#     name: vrd
-#     params:
-#         root_path:   /home/pranoy/Downloads/vrd
-#         num_workers: 4
-#         pin_memory: True
-#         batch_size: 8
-#         persistent_workers: True
-#         shuffle : True
-#     preprocessing:
-#         resolution: 768
-#         center_crop: False
-#         random_flip: True
-#         random_crop: True
-#         mean : null
-#         std : null
-#         scale : 1.0
-
 
     cfg = SimpleNamespace(
         dataset=SimpleNamespace(
@@ -94,13 +99,12 @@ if __name__ == "__main__":
 
 
     with open(os.path.join(dataset_path, 'json_dataset', 'objects.json'), 'r') as f:
-        all_objects = json.load(f)
-
-    print(all_objects)
+        CLASSES = json.load(f)
 
 
-    # Create a dictionary to map integer labels to object names
-    int_to_object = {i: obj for i, obj in enumerate(all_objects)}
+
+    # # Create a dictionary to map integer labels to object names
+    # int_to_object = {i: obj for i, obj in enumerate(all_objects)}
 
 
     transform = transforms.Compose([
@@ -128,43 +132,18 @@ if __name__ == "__main__":
 
 
 
-    img = Image.open(image_path)
-    img_draw = np.array(img)
+    img_org = Image.open(image_path)
+    img_draw = np.array(img_org)
     img_draw = cv2.resize(img_draw, (224, 224))
-    img = transform(img).unsqueeze(0)
-    softmax_logits, bbox = model(img)
+    img = transform(img_org).unsqueeze(0)
+    softmax_logits, bboxes = model(img)
 
 
-    print(softmax_logits.shape)
-
-
-    # print(logits.shape)
-    # Get the most probable boxes
-    print(softmax_logits.shape)
-    max_prob, labels = torch.max(softmax_logits, dim=-1)
+    probas = softmax_logits[0, :, :-1]
+    keep = probas.max(-1).values > 0.5
+    
+    filtered_bbox = rescale_bboxes(bboxes[0, keep], img_org.size)
+    filtered_labels = probas[keep]
     
     
-    
-    # print(logits.shape, bbox.shape)
-    # Filter out the labels with probability less than 0.5 and ignore the label 100
-    valid_indices = (max_prob > 0.8 ) & (labels != 100)
-    filtered_labels = labels[valid_indices]
-    filtered_bbox = bbox[valid_indices]
-
-    print("Filtered Labels:", filtered_labels)
-    print("Filtered Bounding Boxes:", filtered_bbox)
-    predicted_labels = [int_to_object[label.item()] for label in filtered_labels]
-    print("Predicted Labels:", predicted_labels)
-
-    # Convert the image tensor to a numpy array and transpose it to HWC format
-    # Draw the bounding boxes on the image
-    for box, label in zip(filtered_bbox, predicted_labels):
-        x1, y1, x2, y2 = box.int().tolist()
-        cv2.rectangle(img_draw, (x1, y1), (x2, y2), (0, 255, 0), 2)
-        cv2.putText(img_draw, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
-
-    # Save or display the image
-    cv2.imwrite("results/output.jpg", img_draw)
-    # cv2.imshow("Annotated Image", img_np)
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
+    plot_results(img_org, filtered_labels, filtered_bbox)
