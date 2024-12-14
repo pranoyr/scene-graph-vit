@@ -21,7 +21,23 @@ def y1y2x1x2_to_x1y1x2y2(y1y2x1x2):
 	y1 = y1y2x1x2[0]
 	x2 = y1y2x1x2[3]
 	y2 = y1y2x1x2[1]
-	return [x1, y1, x2, y2]
+	bbox = torch.tensor([x1, y1, x2, y2])
+	return bbox
+
+def box_cxcywh_to_xyxy(x):
+    x_c, y_c, w, h = x.unbind(-1)
+    b = [(x_c - 0.5 * w), (y_c - 0.5 * h),
+         (x_c + 0.5 * w), (y_c + 0.5 * h)]
+    return torch.stack(b, dim=-1)
+
+
+def box_xyxy_to_cxcywh(x):
+    x0, y0, x1, y1 = x.unbind(-1)
+    b = [(x0 + x1) / 2, (y0 + y1) / 2,
+         (x1 - x0), (y1 - y0)]
+    return torch.stack(b, dim=-1)
+
+
 
 
 def make_image_list(dataset_path, type):
@@ -130,28 +146,38 @@ class VRDDataset(Dataset):
 		# preds = []
 		annotation = self.annotations[index]
 		for spo in annotation:
-			gt_sbj_label = spo['subject']['category']
-			gt_sbj_bbox = spo['subject']['bbox']
-			gt_obj_label = spo['object']['category']
-			gt_obj_bbox = spo['object']['bbox']
+			sbj_class = spo['subject']['category']
+			sbj_y1y2x1x2 = spo['subject']['bbox']
+			obj_class = spo['object']['category']
+			obj_y1y2x1x2 = spo['object']['bbox']
 			predicate = spo['predicate']
 
 			# prepare bboxes for subject and object
-			gt_sbj_bbox = y1y2x1x2_to_x1y1x2y2(gt_sbj_bbox)
-			gt_obj_bbox = y1y2x1x2_to_x1y1x2y2(gt_obj_bbox)
+			sbj_xyxy = y1y2x1x2_to_x1y1x2y2(sbj_y1y2x1x2)
+			obj_xyxy = y1y2x1x2_to_x1y1x2y2(obj_y1y2x1x2)
 			# transform the boxes
-			gt_sbj_bbox = self.transform_boxes([gt_sbj_bbox], original_size)[0]
-			gt_obj_bbox = self.transform_boxes([gt_obj_bbox], original_size)[0]
-			boxes.append([gt_sbj_bbox, gt_obj_bbox])
+			# gt_sbj_bbox = self.transform_boxes([gt_sbj_bbox], original_size)[0]
+			# gt_obj_bbox = self.transform_boxes([gt_obj_bbox], original_size)[0]
+   
+			# convert to cxcywh format
+			sbj_cxcywh = box_xyxy_to_cxcywh(torch.tensor(sbj_xyxy))
+			obj_cxcywh = box_xyxy_to_cxcywh(torch.tensor(obj_xyxy))
+   
+			# nomalize the boxes
+			w, h = original_size
+			sbj_cxcywh = sbj_cxcywh / torch.tensor([w, h, w, h], dtype=torch.float32)
+			obj_cxcywh = obj_cxcywh / torch.tensor([w, h, w, h], dtype=torch.float32)
+
+			boxes.append([sbj_cxcywh.tolist(), obj_cxcywh.tolist()])
 
 			# prepare labels for subject and object
 			# map to word
-			gt_sbj_label = self.all_objects[gt_sbj_label]
-			gt_obj_label = self.all_objects[gt_obj_label]
+			sbj_class = self.all_objects[sbj_class]
+			obj_class = self.all_objects[obj_class]
 			predicate = self.predicates[predicate]
 			# map to new index
-			labels.append([self._class_to_ind[gt_sbj_label],
-						   self._class_to_ind[gt_obj_label]])
+			labels.append([self._class_to_ind[sbj_class],
+						   self._class_to_ind[obj_class]])
 			preds.append(self._preds_to_ind[predicate])
 		return boxes, labels, preds
 
@@ -237,7 +263,15 @@ if __name__ == '__main__':
 
 			for boxes, labels in zip(annotations[j]['boxes'], annotations[j]['labels']):
 				for box, label in zip(boxes, labels):
+					
+
+					box = box_cxcywh_to_xyxy(box)
+					box = box * cfg.dataset.preprocessing.resolution
+     
 					x1, y1, x2, y2 = box
+     
+
+    
 					plt.text(x1, y1, dataset.ind_to_class[label.item()], fontsize=12, color='r')
 					plt.plot([x1, x2, x2, x1, x1], [y1, y1, y2, y2, y1], color='r')
 				

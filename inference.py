@@ -16,6 +16,7 @@ import numpy as np
 import sys
 from scene_graph.model import SceneGraphViT
 from types import SimpleNamespace
+import random
 
 
 
@@ -60,7 +61,7 @@ if __name__ == "__main__":
                 root_path="/home/pranoy/Downloads/vrd",
                 batch_size=2,
                 shuffle=True,
-                resolution=768
+                resolution=224
             ),
             preprocessing=SimpleNamespace(
                 resolution=768
@@ -83,7 +84,7 @@ if __name__ == "__main__":
     
 
     # load the model
-    ckpt = torch.load("outputs/scene-graph/checkpoints/scene-graph_dinov2-base-run1.pt")
+    ckpt = torch.load("outputs/scene-graph/checkpoints/scene-graph_dinov2-base-run3.pt")
 
     model.load_state_dict(ckpt['state_dict'])
 
@@ -103,7 +104,7 @@ if __name__ == "__main__":
 
 
     transform = transforms.Compose([
-			transforms.Resize((768, 768)),
+			transforms.Resize((224, 224)),
 			transforms.ToTensor(),
 			transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 		])
@@ -113,28 +114,40 @@ if __name__ == "__main__":
         print("Usage: python inference.py <image_path>")
         sys.exit(1)
 
-    image_path = sys.argv[1]
+    image_dir_path = sys.argv[1]
+    # Get a list of all image files in the directory
+    image_files = [f for f in os.listdir(image_dir_path) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+
+    if not image_files:
+        print("No image files found in the directory.")
+        sys.exit(1)
+
+    # Randomly select an image file
+    image_path = os.path.join(image_dir_path, random.choice(image_files))
+    print(f"Selected image: {image_path}")
+
+
+
     img = Image.open(image_path)
     img_draw = np.array(img)
-    img_draw = cv2.resize(img_draw, (768, 768))
+    img_draw = cv2.resize(img_draw, (224, 224))
     img = transform(img).unsqueeze(0)
-    logits, bbox = model(img)
+    softmax_logits, bbox = model(img)
 
 
-    print(logits)
-    print(bbox)
+    print(softmax_logits.shape)
+
 
     # print(logits.shape)
     # Get the most probable boxes
-    prob = F.softmax(logits, dim=-1)
-    max_prob, labels = torch.max(prob, dim=-1)
-
-
-
-
+    print(softmax_logits.shape)
+    max_prob, labels = torch.max(softmax_logits, dim=-1)
+    
+    
+    
     # print(logits.shape, bbox.shape)
     # Filter out the labels with probability less than 0.5 and ignore the label 100
-    valid_indices = (max_prob > 0.5) & (labels != 100)
+    valid_indices = (max_prob > 0.8 ) & (labels != 100)
     filtered_labels = labels[valid_indices]
     filtered_bbox = bbox[valid_indices]
 

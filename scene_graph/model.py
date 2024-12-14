@@ -79,7 +79,7 @@ class RelationshipAttention(nn.Module):
         # self.q = nn.Linear(dim, dim)
         # self.k = nn.Linear(dim, dim)
 
-    def forward(self, q, k, top_k_instances=512, top_k_relationships=32):
+    def forward(self, q, k, top_k_instances=100, top_k_relationships=2):
         # q = self.q(q) query - subject
         # k = self.k(k) key - object
 
@@ -285,7 +285,7 @@ class SceneGraphViT(nn.Module):
         preds_topk = torch.topk(logits_softmax, k=1, dim=-1)[0]
 
         if not exists(annotations):
-            return logits, bbox
+            return logits_softmax, bbox
 
         outputs = {}
         outputs['pred_logits'] = logits
