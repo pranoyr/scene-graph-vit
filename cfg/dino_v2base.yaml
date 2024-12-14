@@ -1,6 +1,6 @@
 experiment:
     project_name: scene-graph
-    exp_name: dinov2-base-run3
+    exp_name: dinov2-base-run4
     max_train_examples: 10000000 # not used
     save_every: 1000
     eval_every: 500
@@ -22,6 +22,11 @@ model:
     n_heads : 12        
     depth : 12
     mlp_dim : 3072
+
+    top_k_instances : 100
+    top_k_relationships : 2
+
+
     
     
 

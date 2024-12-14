@@ -73,13 +73,16 @@ def parse_objects(annotations):
 
 
 class RelationshipAttention(nn.Module):
-    def __init__(self, dim):
+    def __init__(self, dim, top_k_instances=512, top_k_relationships=32):
         super(RelationshipAttention, self).__init__()
         self.dim = dim
+        self.top_k_instances = top_k_instances
+        self.top_k_relationships = top_k_relationships
+
         # self.q = nn.Linear(dim, dim)
         # self.k = nn.Linear(dim, dim)
 
-    def forward(self, q, k, top_k_instances=512, top_k_relationships=32):
+    def forward(self, q, k):
         # q = self.q(q) query - subject
         # k = self.k(k) key - object
 
@@ -94,7 +97,7 @@ class RelationshipAttention(nn.Module):
         diag = scores.diagonal(dim1=-2, dim2=-1)
 
         # relationship scores
-        top_k_indices = torch.topk(diag, k=top_k_instances, dim=-1)[1]
+        top_k_indices = torch.topk(diag, k=self.top_k_instances, dim=-1)[1]
         top_k_indices= torch.sort(top_k_indices, dim=-1, descending=False)[0]
         top_k_indices1 = top_k_indices.clone()
         scores = scores[torch.arange(scores.size(0)).unsqueeze(1), top_k_indices]
@@ -106,7 +109,7 @@ class RelationshipAttention(nn.Module):
 
 
         # get top k relationships, subject-object indices
-        top_k_rel_indices = torch.topk(relationship_scores, k=top_k_relationships, dim=-1)[1]
+        top_k_rel_indices = torch.topk(relationship_scores, k=self.top_k_relationships, dim=-1)[1]
         # add all diag indices
 
         split_shape = top_k_rel_indices.shape[-1] * top_k_rel_indices.shape[-2]
@@ -232,7 +235,7 @@ class SceneGraphViT(nn.Module):
 
         self.mlp = MLP2(dim)
 
-        self.relationship_attention = RelationshipAttention(dim)
+        self.relationship_attention = RelationshipAttention(dim, top_k_instances=cfg.model.top_k_instances, top_k_relationships=cfg.model.top_k_relationships)
 
         self.matcher = HungarianMatcher()
 

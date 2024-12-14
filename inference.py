@@ -6,6 +6,7 @@ from einops import rearrange, repeat, pack
 import torch.nn.functional as F
 from transformers import CLIPTokenizer, CLIPTextModel
 import os
+from omegaconf import DictConfig, ListConfig, OmegaConf
 from scene_graph.matcher import HungarianMatcher, SetCriterion
 from transformers import AutoImageProcessor, Dinov2Model
 from PIL import Image
@@ -55,70 +56,53 @@ def plot_results(pil_img, prob, boxes):
     plt.axis('off')
     # save the image    
     plt.savefig("output.jpg")
-    
+
+
+
+def get_config():
+	"""	Creates a config object from the yaml file and the cli arguments
+	"""
+	cli_conf = OmegaConf.from_cli()
+
+	yaml_conf = OmegaConf.load(cli_conf.config)
+	conf = OmegaConf.merge(yaml_conf, cli_conf)
+	return conf
+
+
 
 
 if __name__ == "__main__":
 
-    cfg = SimpleNamespace(
-        dataset=SimpleNamespace(
-            params=SimpleNamespace(
-                root_path="/home/pranoy/Downloads/vrd",
-                batch_size=2,
-                shuffle=True,
-                resolution=224
-            ),
-            preprocessing=SimpleNamespace(
-                resolution=768
-            )
-        ),
-        model=SimpleNamespace(
-            name="facebook/dinov2-base",
-            dim=768,
-            freeze=True,
-            num_classes=100,
-            patch_size=32,
-            n_heads=12,
-            depth=12,
-            mlp_dim=3072
-        )
-    )
+    
 
-
+    cfg = get_config()
     model = SceneGraphViT(cfg)
+
+
+    filename = os.path.join("outputs/scene-graph/checkpoints", f'{cfg.experiment.project_name}_{cfg.experiment.exp_name}.pt')
     
 
     # load the model
-    ckpt = torch.load("outputs/scene-graph/checkpoints/scene-graph_dinov2-base-run3.pt")
+    ckpt = torch.load(filename)
 
     model.load_state_dict(ckpt['state_dict'])
 
     model.eval()
 
-    dataset_path= "/home/pranoy/Downloads/vrd"
+    dataset_path= cfg.dataset.params.root_path
 
 
     with open(os.path.join(dataset_path, 'json_dataset', 'objects.json'), 'r') as f:
         CLASSES = json.load(f)
 
-
-
-    # # Create a dictionary to map integer labels to object names
-    # int_to_object = {i: obj for i, obj in enumerate(all_objects)}
-
-
     transform = transforms.Compose([
-			transforms.Resize((224, 224)),
+			transforms.Resize((cfg.dataset.preprocessing.resolution, cfg.dataset.preprocessing.resolution)),
 			transforms.ToTensor(),
 			transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 		])
 
 
-    if len(sys.argv) != 2:
-        print("Usage: python inference.py <image_path>")
-        sys.exit(1)
-
-    image_dir_path = sys.argv[1]
+    image_dir_path = cfg.dataset.params.root_path + "/sg_train_images"
     # Get a list of all image files in the directory
     image_files = [f for f in os.listdir(image_dir_path) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
 
@@ -133,8 +117,6 @@ if __name__ == "__main__":
 
 
     img_org = Image.open(image_path)
-    img_draw = np.array(img_org)
-    img_draw = cv2.resize(img_draw, (224, 224))
     img = transform(img_org).unsqueeze(0)
     softmax_logits, bboxes = model(img)
 

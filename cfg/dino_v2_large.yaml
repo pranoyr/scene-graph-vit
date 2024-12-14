@@ -21,6 +21,9 @@ model:
     n_heads : 12        
     depth : 12
     mlp_dim : 3072
+
+    top_k_instances : 512
+    top_k_relationships : 32
     
     
 
