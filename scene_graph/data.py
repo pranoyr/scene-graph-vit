@@ -13,7 +13,48 @@ from transformers import CLIPProcessor, CLIPVisionModel
 from transformers import AutoImageProcessor, AutoModel
 from types import SimpleNamespace
 
+from torchvision.transforms import functional as TF
+import torch.nn.functional as F
+
+from .  import transforms as T
+
 device = torch.device('cpu' if torch.cuda.is_available() else 'cpu')
+
+def letterbox_transform(image, target_size, color=(114, 2, 114)):
+    """
+    Resizes and pads an image to maintain aspect ratio using letterbox padding,
+    without upscaling if the original image is smaller than the target size,
+    and places the image at the top-left of the target canvas.
+    """
+    target_size = (target_size, target_size) if isinstance(target_size, int) else target_size
+    orig_h, orig_w = image.shape[1], image.shape[2]
+    target_h, target_w = target_size
+
+    # Compute scale factor, but don't upscale
+    scale = min(target_w / orig_w, target_h / orig_h, 1.0)
+    new_w, new_h = int(orig_w * scale), int(orig_h * scale)
+
+    # Resize only if needed
+    if (new_w != orig_w) or (new_h != orig_h):
+        resized_image = TF.resize(image, (new_h, new_w))
+    else:
+        resized_image = image
+
+    # Calculate padding for top-left placement
+    pad_w = target_w - new_w
+    pad_h = target_h - new_h
+
+    pad_left = 0
+    pad_top = 0
+    pad_right = pad_w
+    pad_bottom = pad_h
+
+    # Apply padding in left, right, top, bottom order
+    padded_image = F.pad(resized_image, (pad_left, pad_right, pad_top, pad_bottom),
+                         mode='constant', value=color[0])
+
+    return padded_image
+
 
 
 def y1y2x1x2_to_x1y1x2y2(y1y2x1x2):
@@ -37,6 +78,20 @@ def box_xyxy_to_cxcywh(x):
          (x1 - x0), (y1 - y0)]
     return torch.stack(b, dim=-1)
 
+
+def make_transform(img_size):
+
+	normalize = T.Compose([
+		T.ToTensor(),
+		T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+	])
+
+	return T.Compose([
+		T.RandomHorizontalFlip(),
+		T.RandomResize([200, 300, 400, img_size], max_size=img_size),
+		normalize,
+		
+	])
 
 
 
@@ -95,11 +150,16 @@ class VRDDataset(Dataset):
 			zip(self.preds, range(len(self.preds))))
 		self.imgs_list = make_image_list(self.dataset_path, self.image_set)
 
-		self.transform = transforms.Compose([
-			transforms.Resize((self.image_size, self.image_size)),
-			transforms.ToTensor(),
-			transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-		])
+
+		self.transform  = make_transform(self.image_size)
+
+		# self.transform = transforms.Compose([
+		# 	transforms.Resize((self.image_size)),
+		# 	transforms.ToTensor(),
+		# 	transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+		# ])
+
+		
 
 		# self.processor = AutoImageProcessor.from_pretrained(cfg.model.name)
 
@@ -140,6 +200,8 @@ class VRDDataset(Dataset):
 		Load image and bounding boxes info from XML file in the PASCAL VOC
 		format.
 		"""
+		sbj_boxes = []
+		obj_boxes = []
 		boxes = []
 		labels = []
 		preds = []
@@ -160,15 +222,18 @@ class VRDDataset(Dataset):
 			# gt_obj_bbox = self.transform_boxes([gt_obj_bbox], original_size)[0]
    
 			# convert to cxcywh format
-			sbj_cxcywh = box_xyxy_to_cxcywh(torch.tensor(sbj_xyxy))
-			obj_cxcywh = box_xyxy_to_cxcywh(torch.tensor(obj_xyxy))
+			# sbj_cxcywh = box_xyxy_to_cxcywh(torch.tensor(sbj_xyxy))
+			# obj_cxcywh = box_xyxy_to_cxcywh(torch.tensor(obj_xyxy))
    
 			# nomalize the boxes
-			w, h = original_size
-			sbj_cxcywh = sbj_cxcywh / torch.tensor([w, h, w, h], dtype=torch.float32)
-			obj_cxcywh = obj_cxcywh / torch.tensor([w, h, w, h], dtype=torch.float32)
+			# w, h = original_size
+			# sbj_cxcywh = sbj_cxcywh / torch.tensor([w, h, w, h], dtype=torch.float32)
+			# obj_cxcywh = obj_cxcywh / torch.tensor([w, h, w, h], dtype=torch.float32)
 
-			boxes.append([sbj_cxcywh.tolist(), obj_cxcywh.tolist()])
+
+			sbj_boxes.append(sbj_xyxy.tolist())
+			obj_boxes.append(obj_xyxy.tolist())
+
 
 			# prepare labels for subject and object
 			# map to word
@@ -179,29 +244,40 @@ class VRDDataset(Dataset):
 			labels.append([self._class_to_ind[sbj_class],
 						   self._class_to_ind[obj_class]])
 			preds.append(self._preds_to_ind[predicate])
-		return boxes, labels, preds
+
+		return torch.tensor(sbj_boxes), torch.tensor(obj_boxes), labels, preds
 
 	def __getitem__(self, index):
 		img_name = self.imgs_list[index]
 		img_path = self.image_path_from_index(img_name)
 		img = Image.open(img_path)
 		original_size = img.size
-		boxes, labels, preds = self.load_pascal_annotation(img_name, original_size)
+		sbj_boxes, obj_boxes , labels, preds = self.load_pascal_annotation(img_name, original_size)
 		# img = self.transform(images=img, return_tensors="pt").pixel_values[0]
-		img = self.transform(img)
 
+		target = {"sbj_boxes" : sbj_boxes, "obj_boxes": obj_boxes}
+		transformed_img , target = self.transform(img, target)
+
+		transformed_img_size = transformed_img.shape
 		
-		assert len(boxes) == len(
-			labels), "boxes and labels should be of equal length"
+		# add letterbox transform
+		letterbox_padded_img = letterbox_transform(transformed_img, self.image_size)
+
+		boxes = torch.stack((target["sbj_boxes"], target["obj_boxes"]), dim=1)
+		
+		# assert len(boxes) == len(
+		# 	labels), "boxes and labels should be of equal length"
 
 		return {'boxes': torch.tensor(boxes, dtype=torch.float32),
 				'labels': torch.tensor(labels, dtype=torch.int64),
 				'preds': torch.tensor(preds, dtype=torch.int64),
-				'img': img
+				'transformed_img_size' : transformed_img_size,
+				'img': letterbox_padded_img
 				}
 	
 
 def collater(data):
+	# add letterbox transform
 	imgs = [s['img'] for s in data]
 	imgs = torch.stack(imgs, 0)
 	annotations = [{"boxes": s['boxes'].to(device)} for s in data]
@@ -209,6 +285,8 @@ def collater(data):
 		annotations[i]['labels'] = s['labels'].to(device)
 	for i, s in enumerate(data):
 			annotations[i]['preds'] = s['preds'].to(device)
+	for i, s in enumerate(data):
+			annotations[i]['transformed_img_size'] = s['transformed_img_size']
 	return imgs, annotations
 
 
@@ -232,11 +310,10 @@ if __name__ == '__main__':
 			params=SimpleNamespace(
 				root_path="/home/pranoy/Downloads/vrd",
 				batch_size=2,
-				shuffle=True,
-				resolution=768
+				shuffle=False,
 			),
 			preprocessing=SimpleNamespace(
-				resolution=768
+				resolution=518
 			)
 		),
 		model=SimpleNamespace(
@@ -246,7 +323,7 @@ if __name__ == '__main__':
 
 
 	dataset = VRDDataset(cfg, "train")
-	dataloader = DataLoader(dataset, batch_size=2, shuffle=True, collate_fn=collater)
+	dataloader = DataLoader(dataset, batch_size=2, shuffle=False, collate_fn=collater)
 	for i, data in enumerate(dataloader):
 		imgs, annotations = data
 		# print(annotations)
@@ -258,16 +335,20 @@ if __name__ == '__main__':
 			img = img * np.array([0.229, 0.224, 0.225]) + np.array([0.485, 0.456, 0.406])
 			img = np.clip(img, 0, 1)
 
+			size = annotations[j]['transformed_img_size']
+
 			plt.figure(figsize=(10, 10))
 			plt.imshow(img)
 
 			for boxes, labels in zip(annotations[j]['boxes'], annotations[j]['labels']):
 				for box, label in zip(boxes, labels):
+					c, h , w = size
+					
 					
 
 					box = box_cxcywh_to_xyxy(box)
-					box = box * cfg.dataset.preprocessing.resolution
-     
+					box = box * torch.tensor([w, h, w, h], dtype=torch.float32)
+
 					x1, y1, x2, y2 = box
      
 

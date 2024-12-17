@@ -237,13 +237,13 @@ class SceneGraphViT(nn.Module):
 
         self.relationship_attention = RelationshipAttention(dim, top_k_instances=cfg.model.top_k_instances, top_k_relationships=cfg.model.top_k_relationships)
 
-        self.matcher = HungarianMatcher()
+        self.matcher = HungarianMatcher(cfg.loss_weight.ce, cfg.loss_weight.bbox, cfg.loss_weight.giou)
 
 
-        weight_dict = {'loss_ce': 1, 'loss_bbox': 1}
-        weight_dict['loss_giou'] = 1
+        weight_dict = {'loss_ce': cfg.loss_weight.ce, 'loss_bbox': cfg.loss_weight.bbox}
+        weight_dict['loss_giou'] = cfg.loss_weight.giou
 
-        weight_dict['loss_scores'] = 1
+        weight_dict['loss_scores'] = cfg.loss_weight.scores
 
         losses = ['labels', 'boxes', 'cardinality']
         self.criterion = SetCriterion(num_classes, matcher=self.matcher, weight_dict=weight_dict,

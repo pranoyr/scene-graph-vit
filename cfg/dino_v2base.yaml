@@ -1,6 +1,6 @@
 experiment:
     project_name: scene-graph
-    exp_name: dinov2-base-run4
+    exp_name: dinov2-base-run5
     max_train_examples: 10000000 # not used
     save_every: 1000
     eval_every: 500
@@ -23,12 +23,9 @@ model:
     depth : 12
     mlp_dim : 3072
 
-    top_k_instances : 100
+    top_k_instances : 512
     top_k_relationships : 2
 
-
-    
-    
 
 
 dataset:
@@ -41,7 +38,7 @@ dataset:
         persistent_workers: True
         shuffle : True
     preprocessing:
-        resolution: 224
+        resolution: 518
         center_crop: False
         random_flip: True
         random_crop: True
@@ -63,6 +60,13 @@ lr_scheduler:
         learning_rate: ${optimizer.params.learning_rate}
         warmup_steps: 1000
         decay_steps: null
+
+loss_weight:
+    ce : 1
+    bbox : 5
+    giou : 2
+    scores : 1
+
 
 training:
     gradient_accumulation_steps: 2
