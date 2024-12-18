@@ -180,7 +180,7 @@ class SceneGraphTrainer(BaseTrainer):
 		super().__init__(cfg, model, dataloaders)
 
 		# model, optimizer and scheduler
-		self.model = self.model
+		self.model = model
 		self.optim = get_optimizer(cfg, self.model.parameters()) # use different params for different layers if needed
 		self.scheduler = get_scheduler(cfg, self.optim, decay_steps=self.decay_steps)
 
