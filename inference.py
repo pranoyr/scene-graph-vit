@@ -190,7 +190,7 @@ if __name__ == "__main__":
 
 
     probas = softmax_logits[0, :, :-1]
-    keep = probas.max(-1).values > 0.5
+    keep = probas.max(-1).values > 0.7
     
     filtered_bbox = rescale_bboxes(bboxes[0, keep], img_org.size)
     filtered_labels = probas[keep]

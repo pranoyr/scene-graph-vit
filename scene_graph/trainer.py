@@ -76,8 +76,7 @@ class BaseTrainer(object):
 				"name" : self.exp_name}
 		})
 
-		# models and dataloaders
-		self.model = model
+		# dataloaders
 		self.train_dl , self.val_dl = dataloaders
 		self.global_step = 0
 		self.num_epoch = cfg.training.num_epochs
@@ -96,13 +95,7 @@ class BaseTrainer(object):
 		self.decay_steps = cfg.lr_scheduler.params.decay_steps
 		if not self.decay_steps:
 			self.decay_steps = self.num_epoch * len(self.train_dl)
-		
-		# Resume from ckpt
-		if cfg.experiment.resume_path_from_checkpoint:
-			path = cfg.experiment.resume_path_from_checkpoint
-			self.resume_from_checkpoint(path)
-
-	
+			
 		# Checkpoint and generated images folder
 		output_folder = f"outputs/{cfg.experiment.project_name}"
 		self.checkpoint_folder = os.path.join(output_folder, 'checkpoints')
@@ -156,6 +149,15 @@ class BaseTrainer(object):
 		checkpoint = torch.load(checkpoint_path)
 		self.global_step = checkpoint['step']
 		self.model.load_state_dict(checkpoint['state_dict'])
+
+		# resume optimizer and scheduler
+		if 'optimizer' in checkpoint:
+			self.optim.load_state_dict(checkpoint['optimizer'])
+			logging.info("Optimizer loaded from checkpoint")
+		if 'scheduler' in checkpoint:
+			self.scheduler.load_state_dict(checkpoint['scheduler'])
+			logging.info("Scheduler loaded from checkpoint")
+		
 		logging.info("Resume from checkpoint %s (global_step %d)", checkpoint_path, self.global_step)
 
 
@@ -174,11 +176,17 @@ class SceneGraphTrainer(BaseTrainer):
 		dataloaders
 		):
 		super().__init__(cfg, model, dataloaders)
-  
-		
-		params = self.model.parameters()
-		self.optim = get_optimizer(cfg, params)
+
+		# model, optimizer and scheduler
+		self.model = self.model
+		self.optim = get_optimizer(cfg, self.model.parameters()) # use different params for different layers if needed
 		self.scheduler = get_scheduler(cfg, self.optim, decay_steps=self.decay_steps)
+
+		# resume from checkpoint
+		if cfg.experiment.resume_path_from_checkpoint:
+			path = cfg.experiment.resume_path_from_checkpoint
+			self.resume_from_checkpoint(path)
+
 
 		(
 			self.model,
