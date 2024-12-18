@@ -136,6 +136,8 @@ class BaseTrainer(object):
 		checkpoint={
 				'step': self.global_step,
 				'state_dict': self.accelerator.unwrap_model(self.model).state_dict(),
+				'optimizer': self.optim.state_dict(),
+				'scheduler': self.scheduler.state_dict(),
 				'config': self.cfg
 
 			}
