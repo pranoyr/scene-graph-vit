@@ -72,7 +72,7 @@ class BaseTrainer(object):
 		self.accelerator.init_trackers(
 				project_name=cfg.experiment.project_name,
 				init_kwargs={"wandb": {
-				"config" : cfg,
+				# "config" : cfg,
 				"name" : self.exp_name}
 		})
 
